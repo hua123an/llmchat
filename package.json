@@ -7,10 +7,10 @@
     "name": "ChatLLM Team",
     "email": "contact@chatllm.app"
   },
-  "homepage": "https://github.com/chatllm/chatllm",
+  "homepage": "https://github.com/hua123an/llmchat",
   "repository": {
     "type": "git",
-    "url": "https://github.com/chatllm/chatllm.git"
+    "url": "https://github.com/hua123an/llmchat.git"
   },
   "license": "MIT",
   "private": false,
