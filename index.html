@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChatLLM - 智能对话助手</title>
+    <meta name="description" content="ChatLLM是一个现代化的AI对话应用，支持多种大语言模型，提供流畅的对话体验。">
+    <style>
+      /* 预加载样式 - 防止闪烁 */
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        overflow: hidden;
+      }
+      
+      /* 重置所有可能影响加载动画的样式 */
+      * {
+        box-sizing: border-box;
+      }
+      
+      /* 加载动画 */
+      .app-loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        z-index: 9999;
+      }
+      
+      .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        min-width: 200px;
+      }
+      
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #e2e8f0;
+        border-top: 3px solid #2563eb;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      .loading-text {
+        margin-top: 16px;
+        color: #64748b;
+        font-size: 14px;
+        font-weight: 500;
+        text-align: center;
+        white-space: nowrap;
+      }
+      
+      /* 隐藏加载动画当应用准备好时 */
+      .app-loaded .app-loading {
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+      }
+      
+      /* 强制设置对话框样式覆盖 */
+      .el-dialog.custom-settings-dialog,
+      .el-dialog.force-update-v2 {
+        border-radius: 20px !important;
+        background: #ffffff !important;
+        border: none !important;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+        overflow: hidden !important;
+      }
+      
+      .el-dialog.custom-settings-dialog .el-dialog__header,
+      .el-dialog.force-update-v2 .el-dialog__header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        border-bottom: none !important;
+        padding: 24px 28px !important;
+        border-radius: 20px 20px 0 0 !important;
+      }
+      
+      .el-dialog.custom-settings-dialog .el-dialog__title,
+      .el-dialog.force-update-v2 .el-dialog__title {
+        color: #ffffff !important;
+        font-size: 20px !important;
+        font-weight: 700 !important;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+      }
+      
+      .el-dialog.custom-settings-dialog .el-dialog__body,
+      .el-dialog.force-update-v2 .el-dialog__body {
+        background: #ffffff !important;
+        color: #333333 !important;
+        padding: 28px !important;
+      }
+      
+      .el-dialog.custom-settings-dialog .el-dialog__footer,
+      .el-dialog.force-update-v2 .el-dialog__footer {
+        background: #f8fafc !important;
+        border-top: 1px solid #e5e7eb !important;
+        padding: 20px 28px !important;
+        border-radius: 0 0 20px 20px !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <!-- 加载动画 -->
+      <div class="app-loading">
+        <div class="loading-container">
+          <div class="loading-spinner"></div>
+          <div class="loading-text">正在加载 ChatLLM...</div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+    <script>
+      // 应用加载完成后隐藏加载动画
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          document.body.classList.add('app-loaded');
+          setTimeout(() => {
+            const loading = document.querySelector('.app-loading');
+            if (loading) {
+              loading.remove();
+            }
+          }, 300);
+        }, 500);
+      });
+      
+      // 主题检测
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+      const updateTheme = (e) => {
+        if (e.matches) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          document.body.style.background = 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)';
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.body.style.background = 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)';
+        }
+      };
+      
+      // 初始化主题
+      updateTheme(prefersDark);
+      prefersDark.addEventListener('change', updateTheme);
+    </script>
+  </body>
+</html>
