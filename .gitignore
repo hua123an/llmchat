@@ -8,10 +8,10 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
-dist-app
-dist-build
-dist-electron
+dist/
+dist-app/
+dist-build/
+dist-electron/
 *.local
 
 # Editor directories and files
