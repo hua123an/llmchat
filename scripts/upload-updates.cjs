@@ -151,6 +151,11 @@ async function upload() {
       await sftp.fastPut(file, remote);
     }
     console.log('\n✅ 上传完成，共上传', files.length, '个文件');
+    
+    // 创建并上传下载页面
+    console.log('\n📄 创建下载页面...');
+    const { createDownloadPage } = require('./create-download-page.cjs');
+    await createDownloadPage();
   } finally {
     await sftp.end().catch(() => {});
   }
