@@ -1,0 +1,24 @@
+{
+  "app": {
+    "name": "LLM Chat",
+    "description": "Intelligenter Chat-Assistent",
+    "loading": "Lädt...",
+    "confirm": "Bestätigen",
+    "cancel": "Abbrechen",
+    "save": "Speichern"
+  },
+  "nav": {
+    "home": "Startseite",
+    "chat": "Chat",
+    "settings": "Einstellungen"
+  },
+  "chat": {
+    "title": "Chat",
+    "type_message": "Nachricht eingeben...",
+    "send": "Senden"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "language": "Sprache"
+  }
+}

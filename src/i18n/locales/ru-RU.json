@@ -1,0 +1,24 @@
+{
+  "app": {
+    "name": "LLM Chat",
+    "description": "Умный чат-ассистент",
+    "loading": "Загрузка...",
+    "confirm": "Подтвердить",
+    "cancel": "Отмена",
+    "save": "Сохранить"
+  },
+  "nav": {
+    "home": "Главная",
+    "chat": "Чат",
+    "settings": "Настройки"
+  },
+  "chat": {
+    "title": "Чат",
+    "type_message": "Введите сообщение...",
+    "send": "Отправить"
+  },
+  "settings": {
+    "title": "Настройки",
+    "language": "Язык"
+  }
+}

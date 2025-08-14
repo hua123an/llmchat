@@ -1,0 +1,24 @@
+{
+  "app": {
+    "name": "LLM Chat",
+    "description": "지능형 채팅 어시스턴트",
+    "loading": "로딩 중...",
+    "confirm": "확인",
+    "cancel": "취소",
+    "save": "저장"
+  },
+  "nav": {
+    "home": "홈",
+    "chat": "채팅",
+    "settings": "설정"
+  },
+  "chat": {
+    "title": "채팅",
+    "type_message": "메시지를 입력하세요...",
+    "send": "전송"
+  },
+  "settings": {
+    "title": "설정",
+    "language": "언어"
+  }
+}

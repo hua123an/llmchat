@@ -1,0 +1,199 @@
+{
+  "name": "chatllm",
+  "productName": "ChatLLM",
+  "version": "2.0.0",
+  "description": "一个强大的多模型AI聊天应用，支持知识库、联网搜索等功能",
+  "author": {
+    "name": "ChatLLM Team",
+    "email": "contact@chatllm.app"
+  },
+  "homepage": "https://github.com/hua123an/llmchat",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hua123an/llmchat.git"
+  },
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "main": "dist-electron/main.mjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "build:app": "node scripts/gen-icon.js && npm run build && npm run build:check && electron-builder --config.directories.output=dist-build",
+    "release": "node scripts/release.cjs",
+    "release:manual": "npm run build:app && node scripts/upload-updates.cjs",
+    "create-download-page": "node scripts/create-download-page.cjs",
+    "build:check": "node scripts/build-check.js",
+    "build:win": "npm run build && electron-builder --win",
+    "build:mac": "npm run build && electron-builder --mac",
+    "build:linux": "npm run build && electron-builder --linux",
+    "dist": "npm run build && electron-builder --publish=never",
+    "pack": "npm run build && electron-builder --dir",
+    "preview": "vite preview",
+    "clean": "powershell -ExecutionPolicy Bypass -File clean.ps1",
+    "clean:all": "npm run clean && rimraf node_modules package-lock.json",
+    "fresh": "npm run clean:all && npm install",
+    "postinstall": "electron-builder install-app-deps",
+    "deploy": "node scripts/deploy.js",
+    "deploy:server": "bash scripts/server-deploy.sh",
+    "docker:build": "docker build -t llmchat:latest .",
+    "docker:run": "docker run -d -p 80:80 -p 3001:3001 --name llmchat llmchat:latest",
+    "docker:compose": "docker-compose up -d",
+    "docker:stop": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
+    "lint:check": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts"
+  },
+  "dependencies": {
+    "ssh2-sftp-client": "^10.0.3",
+    "@tanstack/vue-query": "^5.83.1",
+    "axios": "^1.11.0",
+    "electron-store": "^10.1.0",
+    "element-plus": "^2.10.5",
+    "electron-updater": "^6.3.4",
+    "mammoth": "^1.7.1",
+    "openai": "^4.104.0",
+    "pdfjs-dist": "^4.6.82",
+    "pinia": "^3.0.3",
+    "tesseract.js": "^5.1.0",
+    "tiktoken": "^1.0.21",
+    "unplugin-auto-import": "^20.0.0",
+    "unplugin-vue-components": "^29.0.0",
+    "vue": "^3.4.21",
+    "vue-i18n": "^9.14.5",
+    "vue-router": "^4.5.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "electron": "^30.0.1",
+    "electron-builder": "^24.13.3",
+    "png-to-ico": "^2.1.8",
+    "pngjs": "^7.0.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.1.6",
+    "vite-plugin-electron": "^0.28.6",
+    "vite-plugin-electron-renderer": "^0.14.5",
+    "vue-tsc": "^2.0.26"
+  },
+  "build": {
+    "appId": "com.chatllm.app",
+    "productName": "ChatLLM",
+    "copyright": "Copyright © 2024 ChatLLM Team",
+    "directories": {
+      "output": "dist-build"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "!**/*.{env,ENV}",
+      "!**/providers*.{json,txt}",
+      "!**/llmconfig*.{txt,json}",
+      "!**/*.backup.*",
+      "!**/*.bak",
+      "build/icon.*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "dist-electron/main.mjs"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "requestedExecutionLevel": "asInvoker",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Office",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ChatLLM"
+    },
+    "dmg": {
+      "title": "${productName} ${version}",
+      "icon": "build/icon.icns",
+      "background": "build/dmg-background.png",
+      "window": {
+        "width": 600,
+        "height": 400
+      },
+      "contents": [
+        {
+          "x": 150,
+          "y": 200,
+          "type": "file"
+        },
+        {
+          "x": 450,
+          "y": 200,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-${arch}-portable.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://your-update-server.example.com/updates/"
+      }
+    ]
+  }
+}
