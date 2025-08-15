@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![ChatLLM Logo](https://img.shields.io/badge/ChatLLM-v2.0.0-blue?style=for-the-badge&logo=electron)
+![ChatLLM Logo](https://img.shields.io/badge/ChatLLM-v2.0.1-blue?style=for-the-badge&logo=electron)
 
 **🤖 一个强大的多模型AI聊天应用**
 
@@ -24,6 +24,13 @@
 - **📚 知识库管理** - 本地 RAG 系统，导入网页内容到知识库
 - **📎 文件处理** - 支持 PDF、Word、图片等多种格式
 - **🌐 网页预览** - 应用内预览网页内容，一键导入知识库
+
+### 🚀 更新亮点 (v2.0.1)
+ - 下拉选择统一为 AppSelect，完整显示模型/提供商名称，键盘无障碍与 aria-label 支持
+ - 文生图生成进度与取消：进度条与“取消”按钮，过程更可控
+ - i18n 与无障碍：补齐大量翻译键与 aria-label
+ - 阿里云文生图：更清晰的错误提示与结果处理
+ - 修复：重复 i18n 键、个别下拉回调类型不匹配
 
 ### 🚀 新增功能 (v2.0.0)
  - 架构重构：服务层/组合式/小型stores拆分
@@ -52,8 +59,8 @@
 访问 [下载页面](https://huaan666.site/update/download.html) 获取最新版本
 
 #### 方式二：直接下载
-- **安装版**: [ChatLLM-1.1.0-x64.exe](https://huaan666.site/update/ChatLLM-1.1.0-x64.exe)
-- **便携版**: [ChatLLM-1.1.0-x64-portable.exe](https://huaan666.site/update/ChatLLM-1.1.0-x64-portable.exe)
+- **安装版**: [ChatLLM-2.0.1-x64.exe](https://github.com/hua123an/llmchat/releases/download/v2.0.1/ChatLLM-2.0.1-x64.exe)
+- **便携版**: [ChatLLM-2.0.1-x64-portable.exe](https://github.com/hua123an/llmchat/releases/download/v2.0.1/ChatLLM-2.0.1-x64-portable.exe)
 
 #### 方式三：GitHub Releases
 访问 [GitHub Releases](https://github.com/hua123an/llmchat/releases) 页面下载
@@ -168,12 +175,10 @@ chatllm/
 
 查看 [CHANGELOG.md](CHANGELOG.md) 了解版本更新详情。
 
-### 🆕 最新版本 v1.1.0 (2024-12-28)
-- ✨ 可点击的搜索结果链接
-- ✨ 网页预览功能
-- ✨ 知识库导入功能
-- ✨ 强制更新遮罩层
-- ✨ 搜索策略优化
+### 🆕 最新版本 v2.0.1 (2025-08-15)
+- 统一下拉组件 AppSelect，文本不截断，键盘无障碍
+- 文生图进度与取消，阿里云错误提示优化
+- 大量 i18n/aria-label 补齐，修复重复键与类型问题
 
 ## 📞 支持与反馈
 
