@@ -13,21 +13,8 @@ on:
 
 jobs:
   build:
-    name: Build for ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
-        include:
-          - os: windows-latest
-            platform: win
-            arch: x64
-          - os: macos-latest
-            platform: mac
-            arch: universal
-          - os: ubuntu-latest
-            platform: linux
-            arch: x64
-    runs-on: ${{ matrix.os }}
+    name: Build for windows-latest
+    runs-on: windows-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,25 +28,13 @@ jobs:
       - name: Build application
         run: npm run build
       - name: Build Electron app (Windows)
-        if: matrix.os == 'windows-latest'
         run: npm run build:win
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build Electron app (macOS)
-        if: matrix.os == 'macos-latest'
-        run: npm run build:mac
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-      - name: Build Electron app (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: npm run build:linux
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-${{ matrix.platform }}-${{ matrix.arch }}
+          name: build-win-x64
           path: |
             dist-build/*.exe
             dist-build/*.yml
@@ -100,7 +75,7 @@ jobs:
         run: |
           if [ -f CHANGELOG.md ]; then
             echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
-            awk 'BEGIN{p=0} /^## \[?2\.0\.1\]?/{p=1} /^## \[?[0-9]/{if(p){exit}} p{print} END{if(!p) print "ChatLLM Release"}' CHANGELOG.md >> $GITHUB_OUTPUT
+            awk 'BEGIN{p=0} /^## \[?2\.0\.2\]?/{p=1} /^## \[?[0-9]/{if(p){exit}} p{print} END{if(!p) print "ChatLLM Release"}' CHANGELOG.md >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
           else
             echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
@@ -164,50 +139,6 @@ jobs:
           asset_content_type: application/octet-stream
         continue-on-error: true
 
-      - name: Upload macOS DMG
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: build-mac-universal/ChatLLM-2.0.0-universal.dmg
-          asset_name: ChatLLM-2.0.0-macOS-universal.dmg
-          asset_content_type: application/octet-stream
-        continue-on-error: true
-
-      - name: Upload macOS ZIP
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: build-mac-universal/ChatLLM-2.0.0-universal.zip
-          asset_name: ChatLLM-2.0.0-macOS-universal.zip
-          asset_content_type: application/zip
-        continue-on-error: true
-
-      - name: Upload Linux AppImage
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: build-linux-x64/ChatLLM-2.0.0-x64.AppImage
-          asset_name: ChatLLM-2.0.0-Linux-x64.AppImage
-          asset_content_type: application/octet-stream
-        continue-on-error: true
-
-      - name: Upload Linux DEB
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: build-linux-x64/ChatLLM-2.0.0-x64.deb
-          asset_name: ChatLLM-2.0.0-Linux-x64.deb
-          asset_content_type: application/vnd.debian.binary-package
-        continue-on-error: true
-
   notify:
     name: Send Notifications
     needs: [release]
@@ -218,12 +149,9 @@ jobs:
       - name: Send success notification
         if: needs.release.result == 'success'
         run: |
-          echo "🎉 ChatLLM v2.0.0 发布成功！"
-          echo "✅ GitHub Release: 已创建"
-          echo "📦 所有平台的安装包已就绪"
-
+          echo "🎉 ChatLLM release succeeded!"
+      
       - name: Send failure notification
         if: needs.release.result == 'failure'
         run: |
-          echo "❌ ChatLLM v2.0.0 发布失败"
-          echo "请检查构建日志并修复问题"
+          echo "❌ ChatLLM release failed"
