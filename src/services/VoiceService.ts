@@ -63,6 +63,10 @@ declare global {
 
 export interface VoiceSettings {
   // STT设置
+  sttProvider?: 'browser' | 'xfyun';
+  xfyunAppId?: string;
+  xfyunApiKey?: string;
+  xfyunApiSecret?: string;
   speechRecognitionLang: string;
   speechRecognitionContinuous: boolean;
   speechRecognitionInterim: boolean;
@@ -92,6 +96,12 @@ export class VoiceService {
   private synthesis: SpeechSynthesis | null = null;
   private isListening = false;
   private isSupported = false;
+  // XFYun runtime
+  private xfWs: WebSocket | null = null;
+  private audioContext: AudioContext | null = null;
+  private mediaStream: MediaStream | null = null;
+  private processor: ScriptProcessorNode | null = null;
+  private xfClosed = false;
   private callbacks: {
     onResult?: (result: VoiceSpeechRecognitionResult) => void;
     onStart?: () => void;
@@ -204,6 +214,18 @@ export class VoiceService {
     onEnd?: () => void;
     onError?: (error: string) => void;
   }): boolean {
+    // 设置回调
+    this.callbacks = callbacks || {};
+
+    const settings = this.getSettings();
+    if (settings.sttProvider === 'xfyun') {
+      this.startXfYunIat(settings).catch(err => {
+        console.error('XFYun start error:', err);
+        this.callbacks.onError?.(String(err?.message || err) || '讯飞听写启动失败');
+      });
+      return true;
+    }
+
     if (!this.isSupported || !this.recognition) {
       return false;
     }
@@ -212,11 +234,7 @@ export class VoiceService {
       this.stopListening();
     }
 
-    // 设置回调
-    this.callbacks = callbacks || {};
-
     try {
-      // Electron/HTTP 环境会因缺少 HTTPS 或权限导致不可用，尝试触发麦克风权限
       if (navigator?.mediaDevices?.getUserMedia) {
         navigator.mediaDevices.getUserMedia({ audio: true }).finally(() => {
           try { this.recognition!.start(); } catch {}
@@ -236,9 +254,13 @@ export class VoiceService {
    * 停止语音识别
    */
   stopListening() {
-    if (this.recognition && this.isListening) {
-      this.recognition.stop();
-    }
+    try {
+      if (this.recognition && this.isListening) {
+        this.recognition.stop();
+      }
+    } catch {}
+    // stop XFYun
+    this.stopXfYun();
   }
 
   /**
@@ -278,6 +300,169 @@ export class VoiceService {
 
       this.synthesis.speak(utterance);
     });
+  }
+
+  // ===== XFYun IAT (WebSocket) =====
+  private async startXfYunIat(settings: VoiceSettings): Promise<void> {
+    if (!settings.xfyunAppId || !settings.xfyunApiKey || !settings.xfyunApiSecret) {
+      throw new Error('请先在设置中填写讯飞 AppID/APIKey/APISecret');
+    }
+    // Build signed URL
+    const host = 'iat-api.xfyun.cn';
+    const path = '/v2/iat';
+    const date = new Date().toUTCString();
+    const algorithm = 'hmac-sha256';
+    const headers = 'host date request-line';
+    const signatureOrigin = `host: ${host}\ndate: ${date}\nGET ${path} HTTP/1.1`;
+    const signature = await this.hmacSha256Base64(settings.xfyunApiSecret!, signatureOrigin);
+    const authorizationOrigin = `hmac username=\"${settings.xfyunApiKey}\", algorithm=\"${algorithm}\", headers=\"${headers}\", signature=\"${signature}\"`;
+    const authorization = this.base64Utf8(authorizationOrigin);
+    const url = `wss://${host}${path}?authorization=${encodeURIComponent(authorization)}&date=${encodeURIComponent(date)}&host=${encodeURIComponent(host)}`;
+
+    // Open WS
+    this.xfClosed = false;
+    const ws = new WebSocket(url);
+    this.xfWs = ws;
+
+    ws.onopen = async () => {
+      try {
+        await this.initMicPipeline(settings.speechRecognitionLang || 'zh-CN');
+        this.isListening = true;
+        this.callbacks.onStart?.();
+      } catch (e) {
+        this.callbacks.onError?.('麦克风初始化失败');
+        this.stopXfYun();
+      }
+    };
+
+    ws.onmessage = (evt: MessageEvent) => {
+      try {
+        const data = JSON.parse(String(evt.data || '{}'));
+        if (data?.code !== 0) {
+          if (data?.code) {
+            this.callbacks.onError?.(`识别错误: ${data.code} ${data.message || ''}`);
+          }
+          return;
+        }
+        const status = data?.data?.status;
+        const segments = data?.data?.result?.ws || [];
+        const text = segments.map((w: any) => (w.cw || []).map((c: any) => c.w || '').join('')).join('');
+        if (text) {
+          this.callbacks.onResult?.({ transcript: text, confidence: 1, isFinal: status === 2 });
+        }
+        if (status === 2) {
+          this.stopXfYun();
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    ws.onerror = () => {
+      this.callbacks.onError?.('讯飞连接错误');
+    };
+
+    ws.onclose = () => {
+      this.teardownMicPipeline();
+      this.isListening = false;
+      if (!this.xfClosed) {
+        this.callbacks.onEnd?.();
+      }
+    };
+  }
+
+  private stopXfYun() {
+    try {
+      if (this.xfWs && this.xfWs.readyState === WebSocket.OPEN) {
+        // send last frame with status 2
+        const lastFrame = { data: { status: 2, format: 'audio/L16;rate=16000', encoding: 'raw', audio: '' } };
+        try { this.xfWs.send(JSON.stringify(lastFrame)); } catch {}
+      }
+    } finally {
+      this.xfClosed = true;
+      try { this.xfWs?.close(); } catch {}
+      this.xfWs = null;
+      this.teardownMicPipeline();
+      this.callbacks.onEnd?.();
+    }
+  }
+
+  private async initMicPipeline(lang: string) {
+    this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    this.mediaStream = stream;
+    const source = this.audioContext.createMediaStreamSource(stream);
+    // Use ScriptProcessor for simplicity
+    const bufferSize = 4096;
+    const processor = this.audioContext.createScriptProcessor(bufferSize, 1, 1);
+    this.processor = processor;
+
+    let firstSent = false;
+    processor.onaudioprocess = (e) => {
+      if (!this.xfWs || this.xfWs.readyState !== WebSocket.OPEN) return;
+      const input = e.inputBuffer.getChannelData(0);
+      // AudioContext already at 16k due to constructor option; still convert to Int16
+      const pcm16 = this.floatTo16BitPCM(input);
+      const chunkBase64 = this.base64FromArrayBuffer(pcm16.buffer);
+      const frame = {
+        common: firstSent ? undefined : { app_id: this.getSettings().xfyunAppId },
+        business: firstSent ? undefined : {
+          language: lang.startsWith('zh') ? 'zh_cn' : 'en_us',
+          domain: 'iat',
+          accent: 'mandarin',
+          dwa: 'wpgs',
+          vad_eos: 8000
+        },
+        data: {
+          status: firstSent ? 1 : 0,
+          format: 'audio/L16;rate=16000',
+          encoding: 'raw',
+          audio: chunkBase64
+        }
+      } as any;
+      try { this.xfWs!.send(JSON.stringify(frame)); firstSent = true; } catch {}
+    };
+    source.connect(processor);
+    processor.connect(this.audioContext.destination);
+  }
+
+  private teardownMicPipeline() {
+    try { this.processor?.disconnect(); } catch {}
+    try { this.audioContext?.close(); } catch {}
+    try { this.mediaStream?.getTracks().forEach(t => t.stop()); } catch {}
+    this.processor = null;
+    this.audioContext = null;
+    this.mediaStream = null;
+  }
+
+  private async hmacSha256Base64(secret: string, data: string): Promise<string> {
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const sig = await crypto.subtle.sign('HMAC', key, enc.encode(data));
+    return this.base64FromArrayBuffer(sig);
+  }
+
+  private base64Utf8(input: string): string {
+    return btoa(unescape(encodeURIComponent(input)));
+  }
+
+  private base64FromArrayBuffer(buf: ArrayBuffer | ArrayBufferLike): string {
+    const bytes = new Uint8Array(buf as ArrayBufferLike);
+    let binary = '';
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)) as any);
+    }
+    return btoa(binary);
+  }
+
+  private floatTo16BitPCM(input: Float32Array): Int16Array {
+    const output = new Int16Array(input.length);
+    for (let i = 0; i < input.length; i++) {
+      let s = Math.max(-1, Math.min(1, input[i]));
+      output[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+    }
+    return output;
   }
 
   /**
@@ -327,6 +512,10 @@ export class VoiceService {
       const settings = saved ? JSON.parse(saved) : {};
       
       return {
+        sttProvider: settings.sttProvider || 'browser',
+        xfyunAppId: settings.xfyunAppId || '',
+        xfyunApiKey: settings.xfyunApiKey || '',
+        xfyunApiSecret: settings.xfyunApiSecret || '',
         speechRecognitionLang: settings.speechRecognitionLang || 'zh-CN',
         speechRecognitionContinuous: settings.speechRecognitionContinuous ?? true,
         speechRecognitionInterim: settings.speechRecognitionInterim ?? true,
@@ -341,6 +530,10 @@ export class VoiceService {
       };
     } catch {
       return {
+        sttProvider: 'browser',
+        xfyunAppId: '',
+        xfyunApiKey: '',
+        xfyunApiSecret: '',
         speechRecognitionLang: 'zh-CN',
         speechRecognitionContinuous: true,
         speechRecognitionInterim: true,
@@ -374,6 +567,14 @@ export class VoiceService {
     } catch (error) {
       console.error('Failed to save voice settings:', error);
     }
+  }
+
+  /**
+   * 是否已配置讯飞听写所需凭据
+   */
+  isXfYunConfigured(): boolean {
+    const s = this.getSettings();
+    return !!(s.xfyunAppId && s.xfyunApiKey && s.xfyunApiSecret);
   }
 
   /**
