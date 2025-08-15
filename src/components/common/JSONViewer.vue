@@ -11,7 +11,7 @@ const pretty = computed(() => {
 </script>
 
 <style scoped>
-.json { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; overflow: auto; }
+.json { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: var(--spacing-md); overflow: auto; box-shadow: var(--shadow-sm); color: var(--text-primary); font-family: 'Fira Code','Consolas','Monaco',monospace; font-size: 13px; line-height: 1.6; }
 </style>
 
 

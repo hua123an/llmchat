@@ -17,7 +17,7 @@
           <div v-if="attachedFiles.length" class="attachments-floating">
             <template v-for="(f, i) in attachedFiles" :key="f.id">
               <div v-if="f.dataUrl && f.mime?.startsWith('image/')" class="image-tile" @click="openPreview(f)">
-                <img :src="f.dataUrl" alt="attachment" />
+                <img :src="f.dataUrl" alt="attachment" loading="lazy" decoding="async" />
                 <button class="tile-remove" @click.stop="removeAttachmentById(f.id)">×</button>
               </div>
               <div v-else class="attachment-chip" @click="openPreview(f)">
@@ -98,8 +98,8 @@
                             }]"
                           >
                             <div class="model-info">
-                              <span class="model-name">{{ getModelDisplayName(model.id) }}</span>
-                              <span class="model-id">{{ model.id }}</span>
+                              <span class="model-name" :title="getModelDisplayName(model.id)">{{ getModelDisplayName(model.id) }}</span>
+                              <span class="model-id" :title="model.id">{{ model.id }}</span>
                             </div>
                             <div 
                               v-if="currentProvider === provider.name && currentModel === model.id" 
@@ -129,19 +129,22 @@
                  <div class="input-actions">
                    <div class="token-counter">{{ store.totalUsage.total_tokens }}/25000</div>
                    
-                   <!-- 联网搜索开关 -->
-                   <button 
-                     v-if="isWebSearchSupported"
-                     @click="webSearchEnabled = !webSearchEnabled"
-                     :class="['action-button', 'web-search-button', { active: webSearchEnabled }]"
-                     :title="webSearchEnabled ? '关闭联网搜索' : '开启联网搜索'"
-                   >
-                     🌐
-                   </button>
+                    
                    
                    <button class="action-button" @click="triggerFileInput" title="添加附件">
                      📎
                    </button>
+                   
+                   <!-- 语音输入按钮 -->
+                   <button 
+                     class="action-button voice-button"
+                     :class="{ 'listening': isListening, 'speaking': isSpeaking }"
+                     @click="toggleVoiceInput"
+                     :title="voiceButtonTitle"
+                   >
+                     {{ voiceButtonIcon }}
+                   </button>
+                   
                    <button
                      @click="handleSendMessage"
                      :disabled="!store.userInput.trim() || !currentProvider || isSending"
@@ -163,7 +166,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, watch } from 'vue';
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useChatStore } from '../store/chat';
 // recognizeImage 已在上方导入一次，避免重复导入
@@ -173,8 +176,9 @@ import AttachmentPreview from './common/AttachmentPreview.vue';
 import { importAttachmentAsDoc } from '../services/rag/import';
 import { ElMessage } from 'element-plus';
 import { ArrowDown } from '@element-plus/icons-vue';
-import { recognizeImage } from '../services/ocr';
+// import { recognizeImage } from '../services/ocr';
 import { useChatMutation } from '../services/router/modelRouter';
+import { voiceService, type VoiceSpeechRecognitionResult } from '../services/VoiceService';
 
 const store = useChatStore();
 const { t } = useI18n();
@@ -228,7 +232,8 @@ const getProviderIcon = (providerName: string) => {
     'doubao': '🎯',
     'qwen': '📚',
     'baichuan': '🏔️',
-    'chatglm': '💬'
+    'chatglm': '💬',
+    'ollama': '🦙'
   };
   
   // 尝试匹配提供商名称
@@ -245,8 +250,27 @@ const fileInputRef = ref<HTMLInputElement>();
 const chatMutation = useChatMutation();
 const isSending = computed(() => (chatMutation as any).isPending?.value ?? false);
 
+// 语音相关状态
+const isListening = ref(false);
+const isSpeaking = ref(false);
+const interimTranscript = ref('');
+const finalTranscript = ref('');
+
 // 使用 store 附件
 const attachedFiles = computed(() => store.currentTab?.attachments || []);
+
+// 语音按钮相关计算属性
+const voiceButtonIcon = computed(() => {
+  if (isListening.value) return '🎤';
+  if (isSpeaking.value) return '🔊';
+  return '🎙️';
+});
+
+const voiceButtonTitle = computed(() => {
+  if (isListening.value) return '点击停止语音识别';
+  if (isSpeaking.value) return '正在播放语音';
+  return '点击开始语音输入';
+});
 
 // 安全的计算属性
 const currentProvider = computed({
@@ -310,6 +334,135 @@ const handleKeyDown = async (event: KeyboardEvent) => {
   }
 };
 
+// 语音相关方法
+const toggleVoiceInput = () => {
+  if (!voiceService.isVoiceSupported()) {
+    ElMessage.error('您的浏览器不支持语音功能');
+    return;
+  }
+
+  if (isListening.value) {
+    stopVoiceInput();
+  } else {
+    startVoiceInput();
+  }
+};
+
+const startVoiceInput = () => {
+  if (isSpeaking.value) {
+    voiceService.stopSpeaking();
+    isSpeaking.value = false;
+  }
+
+  const success = voiceService.startListening({
+    onStart: () => {
+      isListening.value = true;
+      interimTranscript.value = '';
+      finalTranscript.value = '';
+      ElMessage.info('开始语音识别，请说话...');
+    },
+    
+    onResult: (result: VoiceSpeechRecognitionResult) => {
+      if (result.isFinal) {
+        finalTranscript.value += result.transcript;
+        
+        // 检测语音命令
+        const command = voiceService.recognizeCommand(result.transcript);
+        
+        if (command.type !== 'unknown' && command.confidence > 0.7) {
+          handleVoiceCommand(command.type, result.transcript);
+        } else {
+          // 添加到输入框
+          const currentInput = store.userInput.trim();
+          const newText = currentInput ? currentInput + ' ' + result.transcript : result.transcript;
+          store.userInput = newText;
+        }
+        
+        interimTranscript.value = '';
+      } else {
+        interimTranscript.value = result.transcript;
+      }
+    },
+    
+    onEnd: () => {
+      isListening.value = false;
+      interimTranscript.value = '';
+    },
+    
+    onError: (error: string) => {
+      isListening.value = false;
+      interimTranscript.value = '';
+      ElMessage.error(`语音识别错误: ${error}`);
+    }
+  });
+
+  if (!success) {
+    ElMessage.error('无法启动语音识别');
+  }
+};
+
+const stopVoiceInput = () => {
+  voiceService.stopListening();
+  isListening.value = false;
+  interimTranscript.value = '';
+};
+
+const handleVoiceCommand = async (commandType: string, transcript: string) => {
+  switch (commandType) {
+    case 'send':
+      if (store.userInput.trim()) {
+        await handleSendMessage();
+        ElMessage.success('消息已发送');
+      } else {
+        ElMessage.warning('没有可发送的内容');
+      }
+      break;
+      
+    case 'clear':
+      store.userInput = '';
+      ElMessage.success('输入已清空');
+      break;
+      
+    case 'stop':
+      if (isSpeaking.value) {
+        voiceService.stopSpeaking();
+        isSpeaking.value = false;
+        ElMessage.success('已停止语音播放');
+      }
+      break;
+      
+    case 'new_chat':
+      store.addNewChat();
+      ElMessage.success('已创建新对话');
+      break;
+      
+    case 'voice_off':
+      stopVoiceInput();
+      ElMessage.success('语音模式已关闭');
+      break;
+      
+    default:
+      // 未识别的命令，当作正常文本处理
+      const currentInput = store.userInput.trim();
+      const newText = currentInput ? currentInput + ' ' + transcript : transcript;
+      store.userInput = newText;
+  }
+};
+
+// const speakResponse = async (_text: string) => {
+//   if (!voiceService.isVoiceSupported()) return;
+//   
+//   try {
+//     isSpeaking.value = true;
+//     const processedText = voiceService.preprocessTextForSpeech(_text);
+//     await voiceService.speak(processedText);
+//   } catch (error) {
+//     console.error('Speech synthesis failed:', error);
+//   } finally {
+//     isSpeaking.value = false;
+//   }
+// };
+
 // 发送消息 - 使用 TanStack Mutation
 const handleSendMessage = async () => {
   if (!store.userInput.trim() || !currentProvider.value || isSending.value) {
@@ -337,7 +490,7 @@ const handleSendMessage = async () => {
 
   try {
     // 创建消息对
-    const messagePair = store.createMessagePair(webSearchEnabled.value);
+   const messagePair = store.createMessagePair(false);
     if (!messagePair) return;
 
     const { userMessage, assistantMessage, currentProvider: provider, currentModel: model } = messagePair;
@@ -349,7 +502,10 @@ const handleSendMessage = async () => {
     store.currentTab!.messages.push(assistantMessage);
 
     // 准备有效负载
-    const payload = await store.prepareMessagePayload(userMessage, assistantMessage, webSearchEnabled.value);
+    // 如果插件面板设置了“一次性联网搜索”，这里自动开启并清除标记
+    // 兼容旧逻辑的残留开关，已无需；这里清理一次即可
+    try { sessionStorage.removeItem('enableWebSearchOnce'); } catch {}
+    const payload = await store.prepareMessagePayload(userMessage, assistantMessage, false);
     if (!payload) return;
 
     // 清空附件
@@ -376,7 +532,7 @@ const handleSendMessage = async () => {
       userMessageId: userMessage.id,
       assistantMessageId: assistantMessage.id,
       attachments: payload.attachmentsToSend,
-      webSearchEnabled: webSearchEnabled.value,
+      webSearchEnabled: false,
       webSearchOptions: webOpts
     });
 
@@ -555,10 +711,7 @@ const handleProviderChange = async () => {
   }
   
   // 如果切换到不支持联网搜索的服务商，自动关闭联网搜索
-  if (!isWebSearchSupported.value && webSearchEnabled.value) {
-    webSearchEnabled.value = false;
-          ElMessage.info('已自动关闭联网搜索，该功能仅在OpenRouter、Moonshot、智谱AI、302AI和讯飞星火（Pro/Max/Ultra版本）可用');
-  }
+  
 };
 
 // 二级菜单状态管理
@@ -662,6 +815,11 @@ onMounted(async () => {
     }
   }
   
+  // 初始化语音服务
+  if (voiceService.isVoiceSupported()) {
+    console.log('Voice service initialized');
+  }
+  
   // 模型加载现在由 provider watcher 自动处理
   
   // 自动聚焦到输入框
@@ -689,6 +847,16 @@ onMounted(async () => {
   } catch {}
 });
 
+// 清理语音服务
+onUnmounted(() => {
+  if (isListening.value) {
+    voiceService.stopListening();
+  }
+  if (isSpeaking.value) {
+    voiceService.stopSpeaking();
+  }
+});
+
 // 预览对话框
 const previewOpen = ref(false);
 const previewAtt = ref<any>(null);
@@ -709,84 +877,33 @@ const handleImportToKB = async () => {
   }
 };
 
-const canOCR = computed(() => {
-  const files = attachedFiles.value as any[];
-  return Array.isArray(files) && files.some(f => typeof f?.mime === 'string' && f.mime.startsWith('image/'));
-});
+// const canOCR = computed(() => {
+//   const files = attachedFiles.value as any[];
+//   return Array.isArray(files) && files.some(f => typeof f?.mime === 'string' && f.mime.startsWith('image/'));
+// });
 
 // 删除未使用的计算属性
 
-// 检测是否支持联网搜索的服务商（OpenRouter + Moonshot + 智谱AI + 302AI）
-const isWebSearchSupported = computed(() => {
-  const provider = currentProvider.value?.toLowerCase();
-  const currentModel = store.currentTab?.model?.toLowerCase() || '';
-  
-  if (!provider) return false;
-  
-  // OpenRouter、Moonshot、智谱AI、302AI 支持联网搜索
-  if (provider.includes('openrouter') || provider.includes('moonshot') || provider.includes('zhipu') || provider.includes('302ai')) {
-    return true;
-  }
-  
-  // 讯飞星火 支持联网搜索（仅Pro、Max、4.0Ultra版本）
-  if (provider.includes('spark')) {
-    // 只有特定版本支持联网搜索：Pro (generalv3), Max (generalv2), 4.0Ultra (generalv3.5)
-    // 也包括带有pro、max、ultra字样的模型如pro-128k、max-32k
-    return currentModel.includes('generalv3') || // Spark Pro
-           currentModel.includes('generalv2') || // Spark Max
-           currentModel.includes('generalv3.5') || // Spark 4.0 Ultra
-           currentModel.includes('pro') || // pro-128k等
-           currentModel.includes('max') || // max-32k等
-           currentModel.includes('ultra'); // ultra系列
-  }
-  
-  return false;
-});
+// const runOCRForImages = async () => {
+//   try {
+//     // 语言在 recognizeImage 内部自动读取
+//     const images = (attachedFiles.value as any[]).filter(f => f.mime?.startsWith('image/') && f.dataUrl);
+//     if (images.length === 0) return;
+//     // 逐个做 OCR，将结果追加到输入框
+//     let all = '';
+//     for (const img of images) {
+//       const res = await fetch(img.dataUrl).then(r => r.blob()).then(b => new File([b], img.name, { type: img.mime }));
+//       const text = await recognizeImage(res as File);
+//       all += `\n\n[OCR:${img.name}]\n${text}`;
+//     }
+//     store.userInput = (store.userInput || '') + all;
+//     ElMessage.success('OCR completed');
+//   } catch (e) {
+//     ElMessage.error('OCR failed');
+//   }
+// };
 
-const runOCRForImages = async () => {
-  try {
-    // 语言在 recognizeImage 内部自动读取
-    const images = (attachedFiles.value as any[]).filter(f => f.mime?.startsWith('image/') && f.dataUrl);
-    if (images.length === 0) return;
-    // 逐个做 OCR，将结果追加到输入框
-    let all = '';
-    for (const img of images) {
-      const res = await fetch(img.dataUrl).then(r => r.blob()).then(b => new File([b], img.name, { type: img.mime }));
-      const text = await recognizeImage(res as File);
-      all += `\n\n[OCR:${img.name}]\n${text}`;
-    }
-    store.userInput = (store.userInput || '') + all;
-    ElMessage.success('OCR completed');
-  } catch (e) {
-    ElMessage.error('OCR failed');
-  }
-};
-
-// 联网搜索开关 - 简化逻辑，移除前缀依赖
-const webSearchEnabled = ref(false);
-
-// API服务状态
-const apiStatus = ref<{healthy: boolean; message: string} | null>(null);
-
-// 检查API服务状态
-const checkAPIStatus = async () => {
-  try {
-    const status = await (window as any).electronAPI?.checkSearchAPIStatus?.();
-    if (status) {
-      apiStatus.value = {
-        healthy: status.healthy,
-        message: status.message
-      };
-    }
-  } catch (error) {
-    console.warn('检查API状态失败:', error);
-  }
-};
-
-// 组件挂载时检查API状态
-onMounted(() => {
-  checkAPIStatus();
-});
+// 已移除输入框内的联网搜索状态与检查逻辑，改由插件触发
 </script>
 
 <style scoped>
@@ -796,6 +913,9 @@ onMounted(() => {
   margin: 0 auto;
   background: transparent !important;
   border: none !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .input-wrapper {
@@ -803,6 +923,10 @@ onMounted(() => {
   background: transparent !important;
   border: none !important;
   padding: 0 !important;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .input-content {
@@ -812,6 +936,9 @@ onMounted(() => {
   gap: 16px;
   background: transparent !important;
   border: none !important;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 /* 集成输入框样式 */
@@ -1388,6 +1515,39 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
+/* 语音按钮样式 */
+.voice-button {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.voice-button.listening {
+  background: #f56565;
+  color: white;
+  animation: pulse 1.5s infinite;
+}
+
+.voice-button.speaking {
+  background: #38b2ac;
+  color: white;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(245, 101, 101, 0.7);
+  }
+  70% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(245, 101, 101, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(245, 101, 101, 0);
+  }
+}
+
 .send-button {
   background: linear-gradient(135deg, var(--brand-primary), #0db7d1);
   color: white;
@@ -1480,6 +1640,16 @@ onMounted(() => {
 @media (max-width: 768px) {
   .message-input-container {
     padding: 0 16px;
+    justify-content: center;
+  }
+  
+  .input-wrapper {
+    justify-content: center;
+  }
+  
+  .input-content {
+    margin: 0 auto;
+    width: 100%;
   }
   
   .integrated-input-box {
@@ -1579,11 +1749,27 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
+  .message-input-container {
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .input-wrapper {
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .input-content {
+    margin: 0 auto;
+    text-align: center;
+  }
+  
   .integrated-input-box {
     border-radius: 24px;
     padding: 3px 4px 3px 3px;
     gap: 4px;
     min-height: 40px;
+    margin: 0 auto;
   }
   
   .model-selector-button {

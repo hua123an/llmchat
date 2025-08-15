@@ -23,7 +23,7 @@
                   <div class="rich-block">
                     <template v-for="(part, idx) in message.richContent" :key="idx">
                       <div v-if="part.type==='text'" class="rich-text" v-html="renderTextWithLinks(part.text || '')"></div>
-                      <img v-else-if="part.type==='image_url' && part.image_url?.url" :src="part.image_url.url" class="rich-image" />
+                      <img v-else-if="part.type==='image_url' && part.image_url?.url" :src="part.image_url.url" class="rich-image" loading="lazy" decoding="async" />
                     </template>
                   </div>
                 </template>
@@ -74,8 +74,8 @@
                       <div v-for="(annotation, idx) in message.searchAnnotations" :key="idx" class="annotation-item">
                         <div class="annotation-index">{{ idx + 1 }}</div>
                         <div class="annotation-content">
-                          <div class="annotation-title-text">{{ annotation.url_citation.title || '搜索结果' }}</div>
-                          <a :href="annotation.url_citation.url" target="_blank" rel="noopener noreferrer" class="annotation-url">{{ annotation.url_citation.url }}</a>
+                          <div class="annotation-title-text" :title="annotation.url_citation.title || '搜索结果'">{{ annotation.url_citation.title || '搜索结果' }}</div>
+                          <a :href="annotation.url_citation.url" target="_blank" rel="noopener noreferrer" class="annotation-url" :title="annotation.url_citation.url">{{ annotation.url_citation.url }}</a>
                           <button class="preview-btn" @click.prevent="openPreviewFor(annotation.url_citation.url, annotation.url_citation.title)">预览</button>
                           <button class="preview-btn" @click.prevent="savePageToKB(annotation.url_citation.url, annotation.url_citation.title)">入库</button>
                           <div v-if="annotation.url_citation.content" class="annotation-preview">{{ annotation.url_citation.content.slice(0, 150) }}...</div>
@@ -93,8 +93,8 @@
                       <div v-for="c in message.citations" :key="c.index" class="cite-item">
                         <div class="cite-index">{{ c.index }}</div>
                         <div class="cite-content">
-                          <div class="cite-text">{{ c.title || '来源页面' }}</div>
-                          <a :href="c.url" target="_blank" rel="noopener noreferrer" class="cite-url">{{ c.url }}</a>
+                          <div class="cite-text" :title="c.title || '来源页面'">{{ c.title || '来源页面' }}</div>
+                          <a :href="c.url" target="_blank" rel="noopener noreferrer" class="cite-url" :title="c.url">{{ c.url }}</a>
                           <button class="preview-btn" @click.prevent="openPreviewFor(c.url, c.title)">预览</button>
                           <button class="preview-btn" @click.prevent="savePageToKB(c.url, c.title)">入库</button>
                         </div>
@@ -126,11 +126,11 @@
                  <div v-if="message.usage || message.responseTime || message.model || message.provider" class="message-info">
                 <div v-if="message.provider" class="info-item">
                   <span class="info-icon">🌐</span>
-                  <span class="info-text">{{ formatProviderName(message.provider) }}</span>
+                  <span class="info-text" :title="formatProviderName(message.provider)">{{ formatProviderName(message.provider) }}</span>
                 </div>
                 <div v-if="message.model" class="info-item">
                   <span class="info-icon">🤖</span>
-                  <span class="info-text">{{ formatModelName(message.model) }}</span>
+                  <span class="info-text" :title="message.model">{{ message.model }}</span>
                 </div>
                 <div v-if="message.responseTime" class="info-item">
                   <span class="info-icon">⏱️</span>
@@ -385,17 +385,7 @@ const cancelMessage = () => {
   currentlyRetryingMessageId.value = null;
 };
 
-const formatModelName = (model: string) => {
-  if (model.includes('moonshot')) return 'Moonshot';
-  if (model.includes('gpt')) return 'GPT';
-  if (model.includes('claude')) return 'Claude';
-  if (model.includes('deepseek')) return 'DeepSeek';
-  if (model.includes('zhipu')) return 'ChatGLM';
-  if (model.includes('qwen')) return 'Qwen';
-  
-  const parts = model.split('-');
-  return parts[0] || model;
-};
+// 模型名直接完整展示，不再做别名缩写
 
 const formatProviderName = (provider: string) => {
   if (!provider) return '';

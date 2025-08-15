@@ -16,6 +16,14 @@ export interface ElectronAPI {
     blacklist?: string[];
   }) => Promise<any[]>;
   fetchReadable: (url: string) => Promise<string>;
+  translateText: (text: string, target: string, source?: string) => Promise<{ ok: boolean; text?: string; message?: string }>;
+  
+  // 图像生成 API
+  generateImage: (request: any, providerName: string, apiKey: string) => Promise<{ success: boolean; images?: any[]; error?: string; usage?: any }>;
+  // Devtools
+  toggleDevtools: () => Promise<void>;
+  // 版本
+  getAppVersion: () => Promise<string>;
   
   // Provider 管理 API
   saveProviders: (providers: { name: string; baseUrl: string }[]) => Promise<{ ok: boolean; message?: string }>;
@@ -54,6 +62,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onOpenSettings: (callback: (event: IpcRendererEvent) => void) => ipcRenderer.on('open-settings', callback),
   webSearch: (query: string, options?: any) => ipcRenderer.invoke('web-search', query, options),
   fetchReadable: (url: string) => ipcRenderer.invoke('fetch-readable', url),
+  translateText: (text: string, target: string, source?: string) => ipcRenderer.invoke('translate-text', text, target, source),
+  
+  // 图像生成
+  generateImage: (request: any, providerName: string, apiKey: string) => ipcRenderer.invoke('generate-image', request, providerName, apiKey),
+  toggleDevtools: () => ipcRenderer.invoke('devtools-toggle'),
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   checkSearchAPIStatus: () => ipcRenderer.invoke('check-search-api-status'),
   
   // Provider 管理 API

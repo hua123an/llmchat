@@ -3,42 +3,27 @@
     <!-- 顶部区域 -->
     <div class="welcome-header">
       <div class="welcome-logo">
-        <div class="logo-icon">⚡</div>
+        <div class="app-logo-icon" aria-hidden="true"></div>
       </div>
-      <h1 class="welcome-title">欢迎使用 Clarity AI</h1>
+      <h1 class="welcome-title">欢迎使用 ChatLLM</h1>
       <p class="welcome-subtitle">您的个人专业AI助手，可以帮助您完成几乎任何想象得到的任务</p>
     </div>
 
-    <!-- 功能卡片 -->
-    <div class="feature-cards">
-      <div class="feature-card" @click="handleFeatureClick('general-writing')">
-        <div class="card-icon general-writing">📝</div>
-        <h3 class="card-title">通用写作</h3>
-        <p class="card-description">为所有需求提供全面的写作帮助</p>
-      </div>
-      
-      <div class="feature-card" @click="handleFeatureClick('academic-writing')">
-        <div class="card-icon academic-writing">🎓</div>
-        <h3 class="card-title">学术写作</h3>
-        <p class="card-description">通过 Clarity 帮助获得 4.0 学分</p>
-      </div>
-      
-      <div class="feature-card" @click="handleFeatureClick('generate-image')">
-        <div class="card-icon generate-image">🎨</div>
-        <h3 class="card-title">生成图像</h3>
-        <p class="card-description">由 Clarity AI 创建令人惊叹的图像</p>
-      </div>
-      
-      <div class="feature-card" @click="handleFeatureClick('code-snippet')">
-        <div class="card-icon code-snippet">💻</div>
-        <h3 class="card-title">代码片段</h3>
-        <p class="card-description">通过编码解决方案获得即时高效帮助</p>
-      </div>
-      
-      <div class="feature-card" @click="handleFeatureClick('get-idea')">
-        <div class="card-icon get-idea">💡</div>
-        <h3 class="card-title">获取想法</h3>
-        <p class="card-description">通过创新建议激发创造力</p>
+    <!-- 快速操作（设置 / 提示词库 / 插件） -->
+    <div class="quick-ctas">
+      <button class="cta-btn" @click="openProviders"><span>⚙️</span> 配置模型</button>
+      <button class="cta-btn" @click="openPrompts"><span>📚</span> 提示词库</button>
+      <button class="cta-btn" @click="openPlugins"><span>🧩</span> 插件中心</button>
+    </div>
+
+    <!-- 快速模板栅格 -->
+    <div class="prompt-grid">
+      <div class="prompt-card" v-for="p in quickPrompts" :key="p.key" @click="applyQuickPrompt(p)">
+        <div class="prompt-icon" :class="p.key">{{ p.icon }}</div>
+        <div class="prompt-meta">
+          <div class="prompt-title">{{ p.title }}</div>
+          <div class="prompt-desc">{{ p.desc }}</div>
+        </div>
       </div>
     </div>
 
@@ -65,14 +50,7 @@
       </div>
     </div>
 
-    <!-- 升级提示 -->
-    <div class="upgrade-banner">
-      <div class="upgrade-content">
-        <div class="upgrade-icon">👑</div>
-        <span class="upgrade-text">升级到企业版以获得无限制的 Clarity 使用</span>
-        <button class="upgrade-btn" @click="handleUpgradeClick">立即升级 →</button>
-      </div>
-    </div>
+    
   </div>
 </template>
 
@@ -81,6 +59,23 @@ import { ref } from 'vue';
 import { useChatStore } from '../store/chat';
 
 const store = useChatStore();
+// 快速模板
+const quickPrompts = ref([
+  { key: 'summarize', icon: '📝', title: '总结/要点', desc: '把文本提炼为要点与行动项', tpl: '请将以下内容用要点总结，并给出可执行的行动项：\n\n' },
+  { key: 'translate', icon: '🌐', title: '多语言翻译', desc: '自动检测语言并翻译到英文', tpl: '请将以下内容翻译成英文：\n\n' },
+  { key: 'rewrite', icon: '✨', title: '润色改写', desc: '输出精简/正式/口语三版', tpl: '请基于以下文本，输出精简/正式/口语三种改写版本：\n\n' },
+  { key: 'url', icon: '🔗', title: 'URL 抓取总结', desc: '输入网址，获取正文并总结', tpl: '请抓取并总结该网页的要点：' },
+  { key: 'doc', icon: '📄', title: '文档速读', desc: '上传文档，一键读懂', tpl: '请阅读已上传的文档并生成摘要/关键要点/目录。' },
+  { key: 'ocr', icon: '🖼️', title: 'OCR 识图', desc: '粘贴或上传图片提取文字', tpl: '请从图片中识别文字，并按小节整理。' },
+]);
+
+const applyQuickPrompt = (p: any) => {
+  store.userInput = p.tpl;
+};
+
+const openProviders = () => { store.isSettingsOpen = true; };
+const openPrompts = () => { (store as any).openPrompts?.(); };
+const openPlugins = () => { (store as any).openPlugins?.(); };
 
 // 模拟历史记录数据
 const todayHistory = ref([
@@ -97,21 +92,21 @@ const yesterdayHistory = ref([
 ]);
 
 // 处理功能卡片点击
-const handleFeatureClick = (feature: string) => {
-  // 根据功能类型设置输入框内容
-  const prompts = {
-    'general-writing': '帮我写一篇关于',
-    'academic-writing': '帮我写一篇学术论文关于',
-    'generate-image': '帮我生成一张图片：',
-    'code-snippet': '帮我写代码：',
-    'get-idea': '给我一些创意想法关于'
-  };
-  
-  // 直接设置用户输入内容，让用户完善后发送
-  if (prompts[feature as keyof typeof prompts]) {
-    store.userInput = prompts[feature as keyof typeof prompts];
-  }
-};
+// const handleFeatureClick = (_feature: string) => {
+//   // 根据功能类型设置输入框内容
+//   const prompts = {
+//     'general-writing': '帮我写一篇关于',
+//     'academic-writing': '帮我写一篇学术论文关于',
+//     'generate-image': '帮我生成一张图片：',
+//     'code-snippet': '帮我写代码：',
+//     'get-idea': '给我一些创意想法关于'
+//   };
+//   
+//   // 直接设置用户输入内容，让用户完善后发送
+//   if (prompts[_feature as keyof typeof prompts]) {
+//     store.userInput = prompts[_feature as keyof typeof prompts];
+//   }
+// };
 
 // 处理历史记录点击
 const handleHistoryClick = (item: any) => {
@@ -120,10 +115,10 @@ const handleHistoryClick = (item: any) => {
 };
 
 // 处理升级点击
-const handleUpgradeClick = () => {
-  console.log('Upgrade clicked');
-  // 这里可以打开升级页面或弹窗
-};
+// const handleUpgradeClick = () => {
+//   console.log('Upgrade clicked');
+//   // 这里可以打开升级页面或弹窗
+// };
 </script>
 
 <style scoped>
@@ -148,10 +143,8 @@ const handleUpgradeClick = () => {
   margin-bottom: 24px;
 }
 
-.logo-icon {
-  font-size: 48px;
-  color: var(--brand-primary);
-}
+/* 顶部区域 logo 使用与侧栏一致的渐变方块 */
+.app-logo-icon { width:56px; height:56px; border-radius:12px; margin:0 auto; background: conic-gradient(from 45deg, #f59e0b, #ef4444, #8b5cf6, #10b981, #f59e0b); box-shadow: 0 2px 4px rgba(0,0,0,.18); }
 
 .welcome-title {
   font-size: 32px;
@@ -169,93 +162,44 @@ const handleUpgradeClick = () => {
   line-height: 1.5;
 }
 
-/* 功能卡片 */
-.feature-cards {
+/* 快速 CTA */
+.quick-ctas { display:flex; gap:12px; margin: 16px 0 24px; }
+.cta-btn { display:flex; gap:6px; align-items:center; padding:8px 12px; border-radius:10px; border:1px solid var(--border-light); background: var(--bg-container); color: var(--text-primary); cursor:pointer; }
+.cta-btn:hover { border-color: var(--brand-primary); background: var(--bg-hover); }
+
+/* 模板栅格 */
+.prompt-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
   width: 100%;
-  max-width: 900px;
-  margin-bottom: 48px;
+  max-width: 1000px;
+  margin-bottom: 40px;
 }
 
-.feature-card {
+.prompt-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
   background: var(--bg-container);
   border: 1px solid var(--border-light);
   border-radius: 12px;
-  padding: 24px 20px;
-  text-align: center;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all .2s ease;
 }
+.prompt-card:hover { transform: translateY(-1px); border-color: var(--brand-primary); background: var(--bg-hover); }
 
-/* 暗色主题下的卡片阴影 */
-[data-theme="dark"] .feature-card {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
+.prompt-icon { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; }
+.prompt-icon.summarize { background: rgba(59,130,246,.1); color:#3b82f6; }
+.prompt-icon.translate { background: rgba(20,184,166,.12); color:#14b8a6; }
+.prompt-icon.rewrite { background: rgba(168,85,247,.12); color:#a855f7; }
+.prompt-icon.url { background: rgba(234,179,8,.12); color:#eab308; }
+.prompt-icon.doc { background: rgba(99,102,241,.12); color:#6366f1; }
+.prompt-icon.ocr { background: rgba(34,197,94,.12); color:#22c55e; }
 
-.feature-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  border-color: var(--brand-primary);
-}
-
-/* 暗色主题下的卡片悬停阴影 */
-[data-theme="dark"] .feature-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-
-.card-icon {
-  font-size: 32px;
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
-  margin: 0 auto 16px;
-}
-
-.card-icon.general-writing {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
-}
-
-.card-icon.academic-writing {
-  background: rgba(139, 92, 246, 0.1);
-  color: #8b5cf6;
-}
-
-.card-icon.generate-image {
-  background: rgba(249, 115, 22, 0.1);
-  color: #f97316;
-}
-
-.card-icon.code-snippet {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-}
-
-.card-icon.get-idea {
-  background: rgba(34, 197, 94, 0.1);
-  color: #22c55e;
-}
-
-.card-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 8px 0;
-}
-
-.card-description {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin: 0;
-  line-height: 1.4;
-}
+.prompt-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+.prompt-desc { font-size: 13px; color: var(--text-secondary); }
 
 /* 历史记录区域 */
 .history-section {
@@ -367,14 +311,7 @@ const handleUpgradeClick = () => {
     font-size: 24px;
   }
   
-  .feature-cards {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 16px;
-  }
-  
-  .feature-card {
-    padding: 20px 16px;
-  }
+
   
   .card-icon {
     width: 50px;

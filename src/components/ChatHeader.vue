@@ -1,18 +1,28 @@
 <template>
   <div class="chat-header">
-    <el-select v-model="currentProvider" :placeholder="t('chat.placeholders.selectProvider')" @change="store.fetchModels" class="provider-select">
-      <el-option v-for="provider in store.providers" :key="provider.name" :label="formatProviderName(provider.name)" :value="provider.name"></el-option>
-    </el-select>
-    <el-select v-model="currentModel" :placeholder="t('chat.placeholders.selectModel')" :disabled="!currentProvider" class="model-select">
-      <el-option v-for="model in currentModels" :key="model.id" :label="model.name || model.id" :value="model.id"></el-option>
-    </el-select>
+    <AppSelect
+      v-model="currentProvider"
+      class="provider-select"
+      :options="store.providers.map(p => ({ label: formatProviderName(p.name), value: p.name, title: formatProviderName(p.name) }))"
+      :placeholder="t('chat.placeholders.selectProvider')"
+      :aria-label="t('chat.placeholders.selectProvider')"
+      @change="store.fetchModels"
+    />
+    <AppSelect
+      v-model="currentModel"
+      class="model-select"
+      :disabled="!currentProvider"
+      :options="currentModels.map(m => ({ label: m.name || m.id, value: m.id, title: m.name || m.id }))"
+      :placeholder="t('chat.placeholders.selectModel')"
+      :aria-label="t('chat.placeholders.selectModel')"
+    />
     <div class="usage-display">
       <span class="usage-icon">🔢</span>
       <span class="usage-text">{{ store.totalUsage.total_tokens }}</span>
     </div>
-    <el-input v-model="currentSystemPrompt" :placeholder="t('chat.placeholders.systemPrompt')" class="system-prompt-input" />
+    <el-input v-model="currentSystemPrompt" :placeholder="t('chat.placeholders.systemPrompt')" class="system-prompt-input" :aria-label="t('chat.placeholders.systemPrompt')" />
     <ThemeToggle />
-    <el-button size="small" @click="autoRoute" class="route-btn">Auto Route</el-button>
+    <el-button size="small" @click="autoRoute" class="route-btn" :aria-label="t('chat.autoRoute')">{{ t('chat.autoRoute') }}</el-button>
   </div>
   
 </template>
@@ -22,6 +32,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useChatStore } from '../store/chat';
 import ThemeToggle from './ThemeToggle.vue';
+import AppSelect from './common/AppSelect.vue';
 import { pickRoute } from '../services/router/modelRouter';
 // A/B 测试功能已移除
 
@@ -98,9 +109,39 @@ const autoRoute = () => {
 
 .provider-select,
 .model-select {
-  min-width: 160px;
-  max-width: 200px;
+  min-width: 200px;
+  max-width: 300px;
   flex-shrink: 0;
+}
+
+.option-line {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: unset;
+}
+
+/* 确保模型名称完整显示 */
+.provider-select :deep(.el-input__inner),
+.model-select :deep(.el-input__inner) {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* 下拉选项容器增加宽度 */
+.provider-select :deep(.el-select-dropdown),
+.model-select :deep(.el-select-dropdown) {
+  min-width: 250px !important;
+  max-width: 400px !important;
+}
+
+/* 下拉选项文本完整显示 */
+.provider-select :deep(.el-select-dropdown .el-select-dropdown__item),
+.model-select :deep(.el-select-dropdown .el-select-dropdown__item) {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: unset;
+  padding-right: 20px;
 }
 
 .provider-select :deep(.el-input__wrapper),
@@ -244,8 +285,8 @@ const autoRoute = () => {
   
   .provider-select,
   .model-select {
-    min-width: 120px;
-    max-width: 150px;
+    min-width: 150px;
+    max-width: 200px;
   }
   
   .usage-display {
@@ -274,8 +315,8 @@ const autoRoute = () => {
   
   .provider-select,
   .model-select {
-    min-width: 100px;
-    max-width: 130px;
+    min-width: 130px;
+    max-width: 160px;
   }
   
   .usage-display {

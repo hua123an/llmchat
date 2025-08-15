@@ -3,24 +3,100 @@
     <!-- 侧边栏头部 -->
     <div class="sidebar-header">
       <div class="app-logo">
-        <div class="logo-icon">⚡</div>
-        <span class="logo-text">Clarity AI</span>
-        <span class="pro-badge">Pro</span>
+        <div class="logo-icon" aria-hidden="true"></div>
+        <span class="logo-text">ChatLLM</span>
+        <span class="pro-badge" title="已激活专业版">PRO</span>
       </div>
     </div>
 
     <!-- 用户信息区域 -->
     <div class="user-profile" @click="store.openUserProfile">
       <div class="user-avatar">
-        <img v-if="store.userAvatar" :src="store.userAvatar" alt="avatar" />
+        <img v-if="store.userAvatar" :src="store.userAvatar" alt="avatar" loading="lazy" decoding="async" />
         <span v-else class="avatar-text">{{ store.userInitial }}</span>
       </div>
       <div class="user-info">
         <div class="user-name">{{ store.user.name }}</div>
         <div class="user-email">{{ store.user.email }}</div>
       </div>
-      <div class="dropdown-arrow">▼</div>
+      <div class="dropdown-arrow" :class="{ open: userExpanded }" @click.stop="toggleUserExpanded">▼</div>
     </div>
+
+    <transition name="fold">
+      <div v-if="userExpanded" class="user-panel">
+        <div class="panel-row">
+          <div class="panel-label">主题</div>
+          <div class="panel-actions">
+            <button class="chip" :class="{ active: currentTheme === 'light' }" @click.stop="setTheme('light')">浅色</button>
+            <button class="chip" :class="{ active: currentTheme === 'dark' }" @click.stop="setTheme('dark')">深色</button>
+            <button class="chip" :class="{ active: currentTheme === 'auto' }" @click.stop="setTheme('auto')">自动</button>
+          </div>
+        </div>
+        <div class="panel-row">
+          <div class="panel-label">语言</div>
+          <div class="panel-actions">
+            <button class="chip" :class="{ active: currentLanguage === 'zh-CN' }" @click.stop="setLang('zh-CN')">中文</button>
+            <button class="chip" :class="{ active: currentLanguage === 'en-US' }" @click.stop="setLang('en-US')">English</button>
+          </div>
+        </div>
+        <div class="panel-row">
+          <div class="panel-label">模型</div>
+          <div class="panel-actions model-line">
+            <AppSelect
+              v-model="providerName"
+              size="small"
+              :options="providerList.map(p => ({ label: p.name, value: p.name, title: p.name }))"
+              placeholder="Provider"
+              aria-label="选择服务商"
+              @change="onProviderChange"
+            />
+            <AppSelect
+              v-model="modelId"
+              size="small"
+              :disabled="!models.length"
+              :options="models.map((m:any) => ({ label: (m.name || m.id || m), value: (m.id || m), title: (m.name || m.id || m) }))"
+              placeholder="Model"
+              aria-label="选择模型"
+              @change="onModelChange"
+            />
+          </div>
+        </div>
+        <div class="panel-row">
+          <div class="panel-label">常用</div>
+          <div class="panel-actions wrap">
+            <button v-for="p in favoriteProviders" :key="p" class="chip" @click.stop="quickSelectProvider(p)">{{ p }}</button>
+            <button v-for="m in recentModels" :key="m" class="chip" @click.stop="quickSelectModel(m)">{{ m }}</button>
+          </div>
+        </div>
+        <div class="panel-row panel-links">
+          <button class="link-btn" @click.stop="openSettings">设置</button>
+          <button class="link-btn" @click.stop="openPrompts">提示词库</button>
+          <button class="link-btn" @click.stop="openPlugins">插件</button>
+        </div>
+        <div class="panel-row">
+          <div class="panel-label">工作区</div>
+          <div class="panel-actions model-line">
+            <AppSelect
+              v-model="activeSpaceId"
+              size="small"
+              :options="spacesList.map((s:any)=>({ label: s.name, value: s.id, title: s.name }))"
+              placeholder="选择工作区"
+              aria-label="选择工作区"
+              @change="onSpaceChange"
+            />
+            <button class="chip" @click.stop="createWorkspace">新建</button>
+          </div>
+        </div>
+        <div class="panel-row">
+          <div class="panel-label">知识库</div>
+          <div class="panel-actions">
+            <button class="chip" @click.stop="openKnowledge">导入</button>
+            <button class="chip" @click.stop="searchKnowledge">搜索</button>
+            <button class="chip" @click.stop="clearKnowledge">清空</button>
+          </div>
+        </div>
+      </div>
+    </transition>
 
     <!-- 导航菜单 -->
     <nav class="nav-menu">
@@ -39,6 +115,11 @@
       <div :class="['nav-item', { active: activeNavItem === 'plugins' }]" @click="handleNavClick('plugins')">
         <div class="nav-icon">🔌</div>
         <span class="nav-text">插件</span>
+      </div>
+      
+      <div :class="['nav-item', { active: activeNavItem === 'image-generation' }]" @click="handleNavClick('image-generation')">
+        <div class="nav-icon">🎨</div>
+        <span class="nav-text">AI绘图</span>
       </div>
     </nav>
 
@@ -61,6 +142,13 @@
             placeholder="搜索聊天记录" 
             @input="onSearch" 
           />
+          <button 
+            @click="store.openHistorySearch()"
+            class="advanced-search-btn"
+            title="高级历史搜索"
+          >
+            📝
+          </button>
         </div>
       </div>
       
@@ -71,14 +159,26 @@
           @click="store.handleTabChange(tab.name)"
           :class="['conversation-item', { active: store.activeTab === tab.name }]"
         >
-          <div class="conversation-icon">💬</div>
-          <span class="conversation-text">{{ getTabDisplayTitle(tab) }}</span>
-          <div class="conversation-actions">
-            <button 
-              @click.stop="store.removeTab(tab.name)" 
-              class="delete-btn" 
-              v-if="store.tabs.length > 1"
-            >×</button>
+          <div class="conversation-header">
+            <div class="conversation-icon">{{ getCategoryIcon(tab.category) }}</div>
+            <span class="conversation-text">{{ getTabDisplayTitle(tab) }}</span>
+            <div class="conversation-actions">
+              <button 
+                @click.stop="store.removeTab(tab.name)" 
+                class="delete-btn" 
+                v-if="store.tabs.length > 1"
+              >×</button>
+            </div>
+          </div>
+          <div class="conversation-meta" v-if="tab.category && tab.category !== 'other'">
+            <span class="category-badge" :style="{ background: getCategoryColor(tab.category) }">
+              {{ getCategoryDisplayName(tab.category) }}
+            </span>
+            <div class="tags-container" v-if="tab.tags && tab.tags.length > 0">
+              <span v-for="tag in tab.tags.slice(0, 2)" :key="tag" class="tag-chip">
+                {{ tag }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -86,35 +186,94 @@
 
     <!-- 底部菜单 -->
     <div class="bottom-menu">
-      <div class="bottom-item" @click="handlePlansClick">
-        <div class="bottom-icon">💎</div>
-        <span class="bottom-text">套餐</span>
-      </div>
       <div class="bottom-item" @click="openSettings">
         <div class="bottom-icon">⚙️</div>
         <span class="bottom-text">设置</span>
-      </div>
-      <div class="bottom-item" @click="handleLogoutClick">
-        <div class="bottom-icon">🚪</div>
-        <span class="bottom-text">登出</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ref, computed, watch } from 'vue';
+import AppSelect from './common/AppSelect.vue';
+// import { useI18n } from 'vue-i18n';
+import { ElMessage } from 'element-plus';
 import { useChatStore } from '../store/chat';
 import type { ChatTab } from '../store/chat';
+import { themeManager } from '../utils/themeManager';
+import { clearAll as ragClearAll } from '../services/rag/store';
+import { switchLanguage, getCurrentLanguage } from '../locales';
 
 const store = useChatStore();
-const { t } = useI18n();
+// const { t } = useI18n();
 
 // 当前激活的导航项
 const activeNavItem = ref('home');
+const userExpanded = ref(false);
+const toggleUserExpanded = () => { userExpanded.value = !userExpanded.value; };
 
+const currentTheme = computed(() => themeManager.getCurrentTheme());
+const setTheme = (mode: 'light'|'dark'|'auto') => themeManager.setTheme(mode as any);
+const currentLanguage = computed(() => getCurrentLanguage());
+const setLang = (c: 'zh-CN'|'en-US') => switchLanguage(c);
+
+const providerList = computed(() => store.providers || []);
+const providerName = computed({ get: () => store.currentTab?.provider || '', set: (v: string) => { if (store.currentTab) store.currentTab.provider = v; }});
+const models = computed(() => store.currentTab?.models || []);
+const modelId = computed({ get: () => store.currentTab?.model || '', set: (v: string) => { if (store.currentTab) { store.currentTab.model = v; store.saveTabsToStorage?.(); } }});
+const onProviderChange = async () => { try { await store.fetchModels(); } catch {} };
+const onModelChange = () => { try { store.saveTabsToStorage?.(); } catch {} };
+// 快捷入口（用于面板按钮）
+const openPrompts = () => store.openPrompts();
+const openPlugins = () => store.openPlugins();
+
+// 常用 Provider 与最近模型（本地存储）
+const favoriteProviders = ref<string[]>([]);
+try {
+  const arr = JSON.parse(localStorage.getItem('favoriteProviders') || '[]');
+  if (Array.isArray(arr)) favoriteProviders.value = arr as string[];
+} catch {}
+const recentModels = ref<string[]>([]);
+try {
+  const arr2 = JSON.parse(localStorage.getItem('recentModels') || '[]');
+  if (Array.isArray(arr2)) recentModels.value = arr2 as string[];
+} catch {}
+const persistFavs = () => { try { localStorage.setItem('favoriteProviders', JSON.stringify(favoriteProviders.value.slice(0,8))); } catch {} };
+const persistRecents = () => { try { localStorage.setItem('recentModels', JSON.stringify(recentModels.value.slice(0,8))); } catch {} };
+const quickSelectProvider = async (p: string) => { providerName.value = p; await onProviderChange(); };
+const quickSelectModel = (m: string) => { modelId.value = m; onModelChange(); };
+// 记录使用
+watch(providerName, (v) => { if (v && !favoriteProviders.value.includes(v)) { favoriteProviders.value.unshift(v); persistFavs(); } });
+watch(modelId, (v) => { if (v) { const i = recentModels.value.indexOf(v); if (i>=0) recentModels.value.splice(i,1); recentModels.value.unshift(v); persistRecents(); } });
+
+// 工作区
+const spacesList = computed(() => store.spaces || []);
+const activeSpaceId = computed({ get: () => (store.activeSpace || ''), set: (_v: string) => { /* 仅为联动显示 */ } });
+const onSpaceChange = (value: string | number | undefined) => {
+  try {
+    const id = value != null ? String(value) : '';
+    if (id) store.switchSpace?.(id);
+  } catch {}
+};
+const createWorkspace = () => {
+  const name = prompt('新建工作区名称');
+  if (!name) return;
+  try {
+    const id = `space-${Date.now().toString(16)}`;
+    store.spaces.push({ id, name, color: 'blue', shortcut: '', systemPrompt: '', tabs: [] });
+    // 简单持久化
+    try { localStorage.setItem('workSpaces', JSON.stringify(store.spaces)); } catch {}
+  } catch {}
+};
+
+// 知识库快捷
+const openKnowledge = () => { store.isKnowledgeOpen = true; };
+const searchKnowledge = () => { store.isKnowledgeOpen = true; };
+const clearKnowledge = async () => {
+  if (!confirm('确认清空本地知识库？该操作不可恢复。')) return;
+  try { await ragClearAll(); (window as any).ElMessage?.success?.('已清空'); } catch {}
+};
 // 获取标签页显示标题
 const getTabDisplayTitle = (tab: ChatTab): string => {
   if (tab.messages.length > 0) {
@@ -124,6 +283,43 @@ const getTabDisplayTitle = (tab: ChatTab): string => {
     }
   }
   return `新聊天 ${store.tabs.indexOf(tab) + 1}`;
+};
+
+// 分类相关的辅助方法
+const getCategoryIcon = (category?: string) => {
+  const icons = {
+    work: '💼',
+    study: '📚', 
+    creative: '🎨',
+    technical: '💻',
+    daily: '🏠',
+    other: '💬'
+  };
+  return icons[category as keyof typeof icons] || '💬';
+};
+
+const getCategoryDisplayName = (category?: string) => {
+  const names = {
+    work: '工作',
+    study: '学习',
+    creative: '创作', 
+    technical: '技术',
+    daily: '日常',
+    other: '其他'
+  };
+  return names[category as keyof typeof names] || '其他';
+};
+
+const getCategoryColor = (category?: string) => {
+  const colors = {
+    work: '#409EFF',
+    study: '#67C23A',
+    creative: '#E6A23C', 
+    technical: '#F56C6C',
+    daily: '#909399',
+    other: '#C0C4CC'
+  };
+  return colors[category as keyof typeof colors] || '#C0C4CC';
 };
 
 // 处理导航菜单点击
@@ -143,77 +339,23 @@ const handleNavClick = (navItem: string) => {
       break;
       
     case 'prompts':
-      // 打开提示词库（模拟功能）
-      showPromptsLibrary();
+      // 打开提示词库
+      store.openPrompts();
       break;
       
     case 'plugins':
-      // 打开插件管理（模拟功能）
-      showPluginManager();
+      // 打开插件管理
+      store.openPlugins();
+      break;
+      
+    case 'image-generation':
+      // 打开AI绘图
+      store.openImageGeneration();
       break;
   }
 };
 
-// 显示提示词库
-const showPromptsLibrary = () => {
-  ElMessage({
-    message: '提示词库功能开发中，敬请期待！',
-    type: 'info',
-    duration: 3000
-  });
-};
-
-// 显示插件管理器
-const showPluginManager = () => {
-  ElMessage({
-    message: '插件管理功能开发中，敬请期待！',
-    type: 'info', 
-    duration: 3000
-  });
-};
-
-// 处理套餐点击
-const handlePlansClick = () => {
-  ElMessageBox.alert(
-    '当前为免费版本，升级到Pro可享受更多功能：\n\n' +
-    '• 无限次对话\n' +
-    '• 更快的响应速度\n' +
-    '• 优先客服支持\n' +
-    '• 高级AI模型访问\n\n' +
-    '敬请期待正式版发布！',
-    '套餐升级',
-    {
-      confirmButtonText: '了解',
-      type: 'info'
-    }
-  );
-};
-
-// 处理登出点击
-const handleLogoutClick = () => {
-  ElMessageBox.confirm(
-    '确定要登出吗？您的聊天记录将被保存。',
-    '确认登出',
-    {
-      confirmButtonText: '确定登出',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(() => {
-    // 执行登出逻辑
-    performLogout();
-  }).catch(() => {
-    // 用户取消
-  });
-};
-
-// 执行登出
-const performLogout = () => {
-  // 清除用户数据（保留聊天记录）
-  // 这里可以添加更多登出逻辑
-  ElMessage.success('已成功登出');
-  // 注意：实际项目中应该重定向到登录页面
-};
+// 已移除“套餐/登出”相关逻辑
 
 // 简易全文搜索
 import { searchMessages } from '../services/search';
@@ -274,8 +416,11 @@ const openSettings = () => {
 }
 
 .logo-icon {
-  font-size: 24px;
-  color: var(--brand-primary);
+  width:24px;
+  height:24px;
+  border-radius:6px;
+  background: conic-gradient(from 45deg, #f59e0b, #ef4444, #8b5cf6, #10b981, #f59e0b);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.18);
 }
 
 .logo-text {
@@ -286,31 +431,32 @@ const openSettings = () => {
 }
 
 .pro-badge {
-  background: #ff9500;
-  color: white;
+  background: linear-gradient(135deg,#ff8a00 0%,#ffbf3c 100%);
+  color: #1f2937;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 800;
   padding: 2px 8px;
-  border-radius: 12px;
+  border-radius: 999px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
+  border: 1px solid rgba(255,255,255,0.35);
 }
 
 /* 用户信息区域 */
 .user-profile {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
-  margin: 0 16px 16px;
-  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 4px 16px 16px;
+  border-radius: 12px;
   background: var(--bg-surface);
+  border: 1px solid var(--border-light);
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
 }
 
-.user-profile:hover {
-  background: var(--bg-hover);
-}
+.user-profile:hover { background: var(--bg-hover); transform: translateY(-1px); }
 
 .user-avatar {
   width: 40px;
@@ -358,7 +504,57 @@ const openSettings = () => {
   color: var(--text-tertiary);
   font-size: 12px;
   margin-left: 8px;
+  transform: translateY(1px);
 }
+.dropdown-arrow.open { transform: rotate(180deg) translateY(-1px); }
+
+/* 折叠面板 */
+.user-panel {
+  margin: 0 16px 16px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--bg-surface);
+}
+.panel-row { display:flex; align-items:center; justify-content: space-between; gap:8px; padding:6px 0; }
+.panel-label { font-size:12px; color: var(--text-tertiary); min-width:44px; }
+.panel-actions { display:flex; gap:8px; flex:1; }
+.panel-actions.wrap { flex-wrap: wrap; }
+.panel-actions.model-line :deep(.el-select) { 
+  min-width: 120px;
+  flex: 1; 
+}
+
+/* 确保下拉选项文本不被截断 */
+.panel-actions.model-line :deep(.el-select .el-input__inner) {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* 下拉选项容器增加最小宽度 */
+.panel-actions.model-line :deep(.el-select-dropdown) {
+  min-width: 200px !important;
+}
+
+/* 下拉选项文本完整显示 */
+.panel-actions.model-line :deep(.el-select-dropdown .el-select-dropdown__item) {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: unset;
+  padding-right: 20px;
+}
+
+.option-line { white-space: nowrap; overflow: visible; text-overflow: unset; }
+.chip { padding:4px 8px; border:1px solid var(--border-light); background: var(--bg-container); border-radius:8px; cursor:pointer; font-size:12px; color: var(--text-secondary); }
+.chip.active { border-color: var(--brand-primary); color: var(--brand-primary); background: var(--bg-hover); }
+.panel-links { justify-content: flex-start; }
+.link-btn { background: transparent; border: none; color: var(--text-secondary); font-size: 12px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+.link-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+/* 折叠动画 */
+.fold-enter-from, .fold-leave-to { opacity: 0; transform: translateY(-4px); }
+.fold-enter-active, .fold-leave-active { transition: all .15s ease; }
 
 /* 导航菜单 */
 .nav-menu {
@@ -437,6 +633,20 @@ const openSettings = () => {
   color: var(--text-placeholder);
 }
 
+.advanced-search-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  font-size: 14px;
+}
+
+.advanced-search-btn:hover {
+  background: var(--bg-hover);
+}
+
 .conversation-list {
   display: flex;
   flex-direction: column;
@@ -445,12 +655,54 @@ const openSettings = () => {
 
 .conversation-item {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 4px;
   padding: 8px 12px;
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.2s ease;
   position: relative;
+}
+
+.conversation-header {
+  display: flex;
+  align-items: center;
+}
+
+.conversation-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 24px; /* 与icon对齐 */
+  margin-top: 2px;
+}
+
+.category-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  color: white;
+  font-weight: 500;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+}
+
+.tags-container {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.tag-chip {
+  font-size: 9px;
+  padding: 1px 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  max-width: 40px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .conversation-item:hover {

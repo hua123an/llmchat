@@ -49,6 +49,10 @@ export interface ChatTab {
   models: Array<{id: string; name?: string}>;
   systemPrompt: string;
   attachments?: Attachment[];
+  // 新增：智能分类标签
+  category?: 'work' | 'study' | 'creative' | 'technical' | 'daily' | 'other';
+  tags?: string[]; // 自定义标签
+  lastActive?: number; // 最后活跃时间
 }
 
 export interface Attachment {
@@ -130,6 +134,10 @@ export const useChatStore = defineStore('chat', () => {
   const isSidebarCollapsed = ref(false);
   const isStatsOpen = ref(false);
   const isKnowledgeOpen = ref(false);
+  const isPromptsOpen = ref(false);
+  const isPluginsOpen = ref(false);
+  const isHistorySearchOpen = ref(false);
+  const isImageGenerationOpen = ref(false);
 
   // ===== 强制更新状态（用于遮罩层） =====
   const forceUpdateState = ref<{ required: boolean; status: 'idle'|'checking'|'available'|'downloading'|'downloaded'|'error'; notes?: string; progress?: number }>({ required: false, status: 'idle' });
@@ -187,6 +195,16 @@ export const useChatStore = defineStore('chat', () => {
   };
   const toggleStats = () => { isStatsOpen.value = !isStatsOpen.value; };
   const toggleKnowledge = () => { isKnowledgeOpen.value = !isKnowledgeOpen.value; };
+  const openPrompts = () => { isPromptsOpen.value = true; };
+  const closePrompts = () => { isPromptsOpen.value = false; };
+  const openPlugins = () => { isPluginsOpen.value = true; };
+  const closePlugins = () => { isPluginsOpen.value = false; };
+  
+  const openHistorySearch = () => { isHistorySearchOpen.value = true; };
+  const closeHistorySearch = () => { isHistorySearchOpen.value = false; };
+  
+  const openImageGeneration = () => { isImageGenerationOpen.value = true; };
+  const closeImageGeneration = () => { isImageGenerationOpen.value = false; };
 
   // Getters
   const currentTab = computed(() => tabs.value.find(tab => tab.name === activeTab.value));
@@ -577,16 +595,19 @@ export const useChatStore = defineStore('chat', () => {
   const addNewChat = () => {
     const newTabName = `chat-${Date.now()}`;
     const defaultProvider = providers.value.length > 0 ? providers.value[0].name : '';
-    tabs.value.push({
-      name: newTabName,
-      title: `${t('sidebar.newChat')} ${tabs.value.length + 1}`,
-      messages: [],
-      provider: defaultProvider,
-      model: '',
-      models: [],
-      systemPrompt: '',
-      attachments: []
-    });
+         tabs.value.push({
+       name: newTabName,
+       title: `${t('sidebar.newChat')} ${tabs.value.length + 1}`,
+       messages: [],
+       provider: defaultProvider,
+       model: '',
+       models: [],
+       systemPrompt: '',
+       attachments: [],
+       category: 'other',
+       tags: [],
+       lastActive: Date.now()
+     });
     activeTab.value = newTabName;
     saveTabsToStorage();
     
@@ -938,27 +959,39 @@ ${curated}
     isSettingsOpen,
     isUserProfileOpen,
     isSidebarCollapsed,
-    isStatsOpen,
-    isKnowledgeOpen,
-    forceUpdateState,
-    isUpdateOverlayVisible,
-    user,
-    userAvatar,
-    userInitial,
-    statsLedger,
-    currencySettings,
-    currentTab,
-    totalUsage,
-    currentSpace,
-    spaceFilteredTabs,
-    setUser,
-    setUserAvatar,
-    removeUserAvatar,
-    openUserProfile,
-    closeUserProfile,
-    toggleSidebar,
-    toggleStats,
-    toggleKnowledge,
+         isStatsOpen,
+     isKnowledgeOpen,
+     isPromptsOpen,
+     isPluginsOpen,
+     isHistorySearchOpen,
+     isImageGenerationOpen,
+     forceUpdateState,
+     isUpdateOverlayVisible,
+     user,
+     userAvatar,
+     userInitial,
+     statsLedger,
+     currencySettings,
+     currentTab,
+     totalUsage,
+     currentSpace,
+     spaceFilteredTabs,
+     setUser,
+     setUserAvatar,
+     removeUserAvatar,
+     openUserProfile,
+     closeUserProfile,
+     toggleSidebar,
+     toggleStats,
+     toggleKnowledge,
+     openPrompts,
+     closePrompts,
+     openPlugins,
+     closePlugins,
+     openHistorySearch,
+     closeHistorySearch,
+     openImageGeneration,
+     closeImageGeneration,
     clearStats,
     setCurrencySettings,
     getStatsInRange,

@@ -253,19 +253,8 @@ const clearRange = () => {
   justify-content: center;
 }
 
-.toggle-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  border: none;
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: none;
-}
+.toggle-btn { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: var(--shadow-sm); }
+.toggle-btn:hover { background: var(--bg-hover); color: var(--text-primary); box-shadow: var(--shadow-md); }
 
 .overlay {
   position: fixed;
@@ -274,42 +263,14 @@ const clearRange = () => {
   z-index: 0;
 }
 
-.panel {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: min(1000px, 90vw);
-  height: min(700px, 85vh);
-  overflow: hidden;
-  background: var(--bg-primary);
-  border: none;
-  border-radius: 16px;
-  box-shadow: none;
-  display: flex;
-  flex-direction: column;
-  z-index: 1;
-}
+.panel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(1000px, 90vw); height: min(700px, 85vh); overflow: hidden; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; z-index: 1; }
 
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  border-bottom: none;
-}
+.panel-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--border-color); }
 
 .title { font-weight: 600; }
 
-.close-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  border: none;
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
+.close-btn { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-secondary); cursor: pointer; }
+.close-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
 
 .panel-body { 
   padding: 12px; 
@@ -320,7 +281,8 @@ const clearRange = () => {
 .controls { margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; }
 .row-controls, .row-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .control-item { display: flex; align-items: center; gap: 6px; }
-.action-btn { padding: 6px 10px; border: none; background: var(--bg-secondary); border-radius: 6px; cursor: pointer; }
+.action-btn { padding: 6px 10px; border: 1px solid var(--border-color); background: var(--bg-secondary); border-radius: var(--radius-sm); cursor: pointer; }
+.action-btn:hover { background: var(--bg-hover); }
 .action-btn.danger { color: #ef4444; }
 
 .summary {

@@ -50,7 +50,7 @@ async function copy() {
 </script>
 
 <style scoped>
-.preview-body { max-height: 65vh; overflow: auto; white-space: pre-wrap; line-height: 1.5; }
+.preview-body { max-height: 65vh; overflow: auto; white-space: pre-wrap; line-height: 1.6; background: var(--bg-primary); color: var(--text-primary); }
 .content { font-size: 13px; color: var(--text-primary); }
 .loading { color: var(--text-secondary); }
 .dlg-actions { display:flex; gap:8px; justify-content:flex-end; }

@@ -71,20 +71,7 @@ const { t } = useI18n();
 
 <style scoped>
 .actions { display: inline-flex; gap: 6px; }
-.btn { 
-  border: none; 
-  background: var(--bg-secondary); 
-  border-radius: 6px; 
-  padding: 4px 6px; 
-  cursor: pointer; 
-  transition: all 0.2s ease;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 24px;
-  min-height: 24px;
-}
+.btn { border: 1px solid var(--border-color); background: var(--bg-secondary); border-radius: var(--radius-sm); padding: 4px 6px; cursor: pointer; transition: all 0.2s ease; font-size: 14px; display: flex; align-items: center; justify-content: center; min-width: 24px; min-height: 24px; box-shadow: var(--shadow-sm); }
 
 .btn:hover:not(:disabled) { 
   background: var(--bg-hover); 
@@ -106,10 +93,7 @@ const { t } = useI18n();
   background: rgba(239, 68, 68, 0.1);
 }
 
-.btn-retry {
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-}
+.btn-retry { border-color: var(--primary-color); color: var(--primary-color); }
 
 .btn-retry:hover:not(:disabled) {
   background: rgba(59, 130, 246, 0.1);

@@ -43,13 +43,13 @@ const installNow = () => (window as any).electronAPI?.quitAndInstall?.();
 
 <style scoped>
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index: 9999; }
-.panel { width: 520px; background: var(--bg-primary); border-radius: 12px; padding: 20px; box-shadow: 0 8px 30px rgba(0,0,0,.2); }
+.panel { width: 520px; background: var(--bg-primary); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); }
 .title { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
 .notes { max-height: 40vh; overflow:auto; color: var(--text-primary); font-size: 14px; line-height: 1.6; }
 .progress { margin-top: 12px; }
-.bar { height: 8px; background: var(--bg-tertiary); border-radius: 6px; overflow: hidden; }
+.bar { height: 8px; background: var(--bg-tertiary); border-radius: var(--radius-sm); overflow: hidden; }
 .fill { height: 100%; background: var(--primary-color); }
-.actions { display:flex; justify-content:flex-end; gap:10px; margin-top: 16px; }
+.actions { display:flex; justify-content:flex-end; gap: var(--spacing-sm); margin-top: 16px; }
 .fade-enter-active,.fade-leave-active{ transition: opacity .2s ease; }
 .fade-enter-from,.fade-leave-to{ opacity: 0; }
 </style>
