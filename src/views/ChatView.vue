@@ -20,7 +20,9 @@
         <!-- 聊天内容区域 -->
         <div class="chat-main">
           <div class="chat-content">
-            <MessageList />
+            <!-- 显示欢迎页面或聊天内容 -->
+            <WelcomePage v-if="shouldShowWelcome" />
+            <MessageList v-else />
           </div>
         </div>
         
@@ -38,6 +40,14 @@
     <AgentSelector />
     <!-- 设置对话框 -->
     <SettingsDialog />
+    <!-- 提示词库对话框 -->
+    <PromptsDialog />
+    <!-- 插件对话框 -->
+    <PluginsDialog />
+    <!-- 历史搜索对话框 -->
+    <HistorySearchDialog />
+    <!-- AI绘图对话框 -->
+    <ImageGenerationDialog />
     <!-- 用户资料对话框 -->
     <UserProfileDialog />
     
@@ -45,29 +55,41 @@
     <StatsFloating />
     <!-- 知识库悬浮窗 -->
     <!-- <KnowledgeFloating /> -->
-    <!-- <ProvidersFloating /> -->
+    <!-- AI提供商配置悬浮窗 -->
+    <ProvidersFloating />
     <!-- 强制更新遮罩层 -->
     <UpdateOverlay />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Sidebar from '../components/Sidebar.vue';
 import MessageList from '../components/MessageList.vue';
 import MessageInput from '../components/MessageInput.vue';
+import WelcomePage from '../components/WelcomePage.vue';
 import AgentSelector from '../components/AgentSelector.vue';
 import SettingsDialog from '../components/SettingsDialog.vue';
+import PromptsDialog from '../components/common/PromptsDialog.vue';
+import PluginsDialog from '../components/common/PluginsDialog.vue';
+import HistorySearchDialog from '../components/common/HistorySearchDialog.vue';
+import ImageGenerationDialog from '../components/common/ImageGenerationDialog.vue';
 import UserProfileDialog from '../components/UserProfileDialog.vue';
 import StatsFloating from '../components/StatsFloating.vue';
 import UpdateOverlay from '../components/common/UpdateOverlay.vue';
 // import KnowledgeFloating from '../components/KnowledgeFloating.vue';
-// import ProvidersFloating from '../components/ProvidersFloating.vue';
+import ProvidersFloating from '../components/ProvidersFloating.vue';
 import { useChatStore } from '../store/chat';
 
 const store = useChatStore();
 const { t } = useI18n();
+
+// 决定是否显示欢迎页面
+const shouldShowWelcome = computed(() => {
+  const currentTab = store.tabs.find(tab => tab.name === store.activeTab);
+  return !currentTab || currentTab.messages.length === 0;
+});
 
 // 在组件挂载时加载初始数据
 onMounted(async () => {
@@ -164,13 +186,18 @@ onMounted(async () => {
   flex-shrink: 0;
   display: flex;
   justify-content: center;
+  align-items: center;
   padding: 20px;
   background: var(--bg-secondary);
+  width: 100%;
 }
 
 .input-container {
   width: 100%;
   max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
 }
 
 

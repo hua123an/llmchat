@@ -8,6 +8,24 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  define: {
+    'import.meta.env.APP_VERSION': JSON.stringify(process.env.APP_VERSION || ''),
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('pdfjs-dist')) return 'vendor-pdf';
+            if (id.includes('mammoth')) return 'vendor-docx';
+            if (id.includes('element-plus')) return 'vendor-ui';
+            return 'vendor';
+          }
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1200,
+  },
   plugins: [
     vue(),
     AutoImport({

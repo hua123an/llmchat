@@ -5,9 +5,9 @@
 
 :root {
   /* ===== 品牌主色调 ===== */
-  --brand-primary: #6366f1;
-  --brand-primary-light: #a5b4fc;
-  --brand-primary-dark: #4338ca;
+  --brand-primary: #00bcd4;
+  --brand-primary-light: #b3e5fc;
+  --brand-primary-dark: #0097a7;
   --brand-secondary: #ec4899;
   --brand-accent: #14b8a6;
 
@@ -30,16 +30,16 @@
   --gray-900: #111827;
 
   /* ===== 背景色系统 ===== */
-  --bg-page: #f7f7f7;           /* 页面背景 */
+  --bg-page: #f8f9fa;           /* 页面背景 */
   --bg-container: #ffffff;      /* 容器背景 */
   --bg-surface: #ffffff;        /* 表面背景 */
   --bg-sidebar: #ffffff;        /* 侧边栏背景 */
   --bg-header: #ffffff;         /* 头部背景 */
   --bg-input: #ffffff;          /* 输入框背景 */
-  --bg-hover: #f3f4f6;          /* 悬停背景 */
-  --bg-active: #e5e7eb;         /* 激活背景 */
-  --bg-selected: #f0f9ff;       /* 选中背景 */
-  --bg-secondary: #f7f7f7;      /* 次要背景 */
+  --bg-hover: #f5f5f5;          /* 悬停背景 */
+  --bg-active: #00bcd4;         /* 激活背景 */
+  --bg-selected: #e0f7f9;       /* 选中背景 */
+  --bg-secondary: #f8f9fa;      /* 次要背景 */
 
   /* ===== 文字颜色系统 ===== */
   --text-primary: #111827;      /* 主要文字 */

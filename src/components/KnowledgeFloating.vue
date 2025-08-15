@@ -50,7 +50,7 @@
         <!-- Doc list -->
         <ul class="doc-list">
           <li v-for="d in filteredDocs" :key="d.id" class="doc-item">
-            <div class="doc-name">{{ d.name }}</div>
+            <div class="doc-name" :title="d.name">{{ d.name }}</div>
             <div class="doc-meta">
               <span class="chip">{{ formatBytes(d.size || 0) }}</span>
               <span class="chip" v-if="d.createdAt">{{ formatTime(d.createdAt) }}</span>
@@ -293,19 +293,21 @@ function formatBytes(bytes: number): string {
 
 <style scoped>
 .knowledge-floating { position: fixed; right: 72px; bottom: 20px; z-index: 1000; }
-.toggle-btn { width: 44px; height: 44px; border-radius: 12px; border: none; background: var(--bg-secondary); color: var(--text-secondary); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow: none; }
-.panel { position: absolute; right: 0; bottom: 56px; width: 600px; max-height: 78vh; overflow: auto; background: var(--bg-primary); border: none; border-radius: 12px; box-shadow: none; }
-.panel-header { display:flex; align-items:center; justify-content: space-between; padding: 12px 14px; border-bottom: none; }
-.title { font-weight: 600; }
-.close-btn { width:28px; height:28px; border-radius:8px; border:none; background: var(--bg-secondary); color: var(--text-secondary); cursor:pointer; }
+.toggle-btn { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-secondary); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow: var(--shadow-sm); }
+.toggle-btn:hover { background: var(--bg-hover); color: var(--text-primary); box-shadow: var(--shadow-md); }
+.panel { position: absolute; right: 0; bottom: 56px; width: 600px; max-height: 78vh; overflow: auto; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
+.panel-header { display:flex; align-items:center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--border-color); }
+.title { font-weight: 600; color: var(--text-primary); }
+.close-btn { width:28px; height:28px; border-radius:8px; border:1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-secondary); cursor:pointer; }
+.close-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
 .panel-body { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
-.import-card { border: none; background: var(--bg-secondary); border-radius: 10px; padding: 10px; }
+.import-card { border: 1px solid var(--border-color); background: var(--bg-secondary); border-radius: var(--radius-md); padding: 10px; box-shadow: var(--shadow-sm); }
 .import-card.disabled { opacity: .6; pointer-events: none; }
 .import-header { display:flex; align-items:center; justify-content: space-between; gap: 8px; }
 .import-title { font-weight: 600; }
 .import-actions { display:flex; gap: 8px; }
 .import-sub { color: var(--text-tertiary); font-size: 12px; margin: 6px 0; }
-.dropzone { border: 1px dashed var(--border-color); border-radius: 10px; background: var(--bg-primary); padding: 18px; text-align: center; }
+.dropzone { border: 1px dashed var(--border-color); border-radius: var(--radius-md); background: var(--bg-primary); padding: 18px; text-align: center; }
 .dropzone.active { border-color: var(--primary-color); background: rgba(0,0,0,0.04); }
 .dropzone.disabled { opacity: .6; pointer-events: none; }
 .progress-row { display:flex; flex-direction: column; gap:6px; margin-top: 10px; }
@@ -314,11 +316,12 @@ function formatBytes(bytes: number): string {
 .meta-row { display:flex; align-items:center; justify-content: space-between; gap:10px; }
 .stats { display:flex; gap:8px; }
 .doc-list { list-style:none; padding:0; margin:0; display:flex; flex-direction: column; gap:6px; }
-.doc-item { display:flex; align-items:center; justify-content: space-between; padding: 8px 10px; border: none; border-radius: 8px; background: var(--bg-secondary); }
+.doc-item { display:flex; align-items:center; justify-content: space-between; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-secondary); }
 .doc-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px; }
 .doc-meta { display:flex; gap:6px; }
-.chip { font-size: 12px; color: var(--text-secondary); background: var(--bg-primary); border: none; border-radius: 999px; padding: 2px 8px; }
-.link-btn { border: none; background: var(--bg-primary); color: var(--text-primary); padding: 4px 8px; border-radius: 6px; cursor: pointer; }
+.chip { font-size: 12px; color: var(--text-secondary); background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 999px; padding: 2px 8px; }
+.link-btn { border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); padding: 4px 8px; border-radius: var(--radius-sm); cursor: pointer; }
+.link-btn:hover { background: var(--bg-hover); }
 .editor-wrap :deep(.el-textarea__inner) { background: var(--bg-primary); color: var(--text-primary); border: none; }
 .empty { color: var(--text-tertiary); text-align: center; padding: 12px 0; }
 @media (max-width: 640px) { .panel { width: calc(100vw - 32px); right: -8px; } }

@@ -111,6 +111,8 @@ export default {
       actions: 'Actions',
       add: 'Add Provider',
       test: 'Test',
+      refreshOllama: 'Refresh Ollama',
+      noOllama: 'Please add an Ollama provider first',
       autosaveHint: 'Auto-save enabled (typing saves)',
       saveSuccess: 'Providers saved',
       saveFailed: 'Save failed',
@@ -177,7 +179,8 @@ export default {
       selectModel: 'Select Model',
       loadingProviders: 'Loading providers...',
       systemPrompt: 'Set system prompt...'
-    }
+    },
+    autoRoute: 'Auto Route'
   },
 
 
@@ -401,5 +404,124 @@ export default {
     clearedChat: 'Chat cleared',
     sidebarToggleInfo: 'Sidebar toggle is not implemented yet',
     budgetWarn: 'You are approaching the monthly token budget'
+  },
+
+  // Image Generation
+  imageGeneration: {
+    title: 'AI Image Generation',
+    prompt: 'Image Description',
+    promptPlaceholder: 'Describe the image you want to generate...',
+    size: 'Image Size',
+    model: 'Generation Model',
+    provider: 'Provider',
+    generate: 'Generate Image',
+    generating: 'AI is creating your image, please wait...',
+    download: 'Download',
+    copyToClipboard: 'Copy to Clipboard',
+    addToChat: 'Add to Chat',
+    preview: 'Image Preview',
+    examplePrompts: 'Try these examples:',
+    emptyState: 'Enter a description on the left to start AI creation',
+    actions: {
+      download: 'Download Image',
+      copy: 'Copy Image',
+      chat: 'Add to Chat'
+    }
+  },
+
+  // Message Actions
+  messageActions: {
+    copy: 'Copy',
+    edit: 'Edit',
+    delete: 'Delete',
+    regenerate: 'Regenerate',
+    continue: 'Continue',
+    save: 'Save to Prompt Library'
+  },
+
+  // Attachment Preview
+  attachmentPreview: {
+    preview: 'Preview',
+    download: 'Download',
+    open: 'Open',
+    close: 'Close'
+  },
+
+  // Code Block
+  codeBlock: {
+    copy: 'Copy Code',
+    copied: 'Copied',
+    expand: 'Expand',
+    collapse: 'Collapse'
+  },
+
+  // User Profile
+  userProfile: {
+    title: 'User Profile',
+    name: 'Name',
+    email: 'Email',
+    avatar: 'Avatar',
+    save: 'Save',
+    cancel: 'Cancel',
+    uploadAvatar: 'Upload Avatar',
+    removeAvatar: 'Remove Avatar'
+  },
+
+  
+
+  // Prompt Library
+  prompts: {
+    title: 'Prompt Library',
+    add: 'Add Prompt',
+    edit: 'Edit Prompt',
+    delete: 'Delete Prompt',
+    category: 'Category',
+    content: 'Content',
+    name: 'Name',
+    description: 'Description',
+    search: 'Search Prompts',
+    noResults: 'No matching prompts found'
+  },
+
+  // Plugin Management
+  plugins: {
+    title: 'Plugin Management',
+    enable: 'Enable',
+    disable: 'Disable',
+    configure: 'Configure',
+    description: 'Description',
+    version: 'Version',
+    author: 'Author',
+    status: 'Status',
+    active: 'Active',
+    inactive: 'Inactive'
+  },
+
+  // History Search
+  historySearch: {
+    title: 'Search History',
+    search: 'Search',
+    searchPlaceholder: 'Enter keywords to search...',
+    category: 'Category',
+    dateRange: 'Date Range',
+    results: 'Search Results',
+    noResults: 'No matching messages found',
+    clearSearch: 'Clear Search',
+    advancedSearch: 'Advanced Search',
+    allCategories: 'All Categories'
+  },
+
+  // A/B Testing
+  abTest: {
+    title: 'A/B Testing',
+    provider: 'Provider',
+    model: 'Model',
+    prompt: 'Prompt',
+    runTest: 'Run Test',
+    results: 'Test Results',
+    comparison: 'Comparison Results',
+    winner: 'Winner',
+    tie: 'Tie',
+    noWinner: 'No Winner'
   }
 };

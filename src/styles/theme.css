@@ -4,21 +4,28 @@
 :root {
   /* ===== 主色调 ===== */
   --primary-color: #6366f1;
-  --primary-hover: #5855eb;
-  --primary-active: #4f46e5;
+  --primary-hover: #4f46e5;
+  --primary-active: #4338ca;
   --primary-light: #a5b4fc;
   --primary-dark: #3730a3;
+  --primary-soft: rgba(99,102,241,.12);
+  --accent-color: #22d3ee;
 
   /* ===== 功能色彩 ===== */
   --success-color: #10b981;
   --warning-color: #f59e0b;
   --error-color: #ef4444;
   --info-color: #3b82f6;
+  /* 浅色背景（用于消息/提示） */
+  --success-light: rgba(16, 185, 129, 0.10);
+  --warning-light: rgba(245, 158, 11, 0.10);
+  --error-light: rgba(239, 68, 68, 0.10);
+  --info-light: rgba(59, 130, 246, 0.10);
 
   /* ===== 背景色彩 ===== */
   --bg-primary: #ffffff;
-  --bg-secondary: #f7f7f7;
-  --bg-tertiary: #f1f5f9;
+  --bg-secondary: #f7f7f9;
+  --bg-tertiary: #eef2f7;
   --bg-hover: #f3f4f6;
   --bg-active: #e5e7eb;
 
@@ -26,26 +33,27 @@
   --border-color: #e2e8f0;
   --border-hover: #cbd5e1;
   --border-active: #94a3b8;
+  --divider-color: #e5e7eb;
 
   /* ===== 文字颜色 ===== */
   --text-primary: #1e293b;
   --text-secondary: #64748b;
   --text-tertiary: #94a3b8;
-  --text-placeholder: #cbd5e1;
-  --text-muted: #94a3b8;
+  --text-placeholder: #94a3b8;
+  --text-muted: #9aa3b2;
   --text-white: #ffffff;
 
   /* ===== 阴影 ===== */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-base: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-sm: 0 1px 2px rgba(16,24,40,.06);
+  --shadow-base: 0 1px 3px rgba(16,24,40,.08), 0 1px 2px rgba(16,24,40,.06);
+  --shadow-md: 0 4px 8px rgba(16,24,40,.10), 0 2px 4px rgba(16,24,40,.06);
+  --shadow-lg: 0 12px 20px rgba(16,24,40,.12), 0 4px 6px rgba(16,24,40,.08);
+  --shadow-xl: 0 20px 25px rgba(16,24,40,.14), 0 8px 10px rgba(16,24,40,.10);
 
   /* ===== 圆角 ===== */
-  --radius-sm: 4px;
-  --radius-base: 6px;
-  --radius-md: 8px;
+  --radius-sm: 8px;
+  --radius-base: 10px;
+  --radius-md: 12px;
   --radius-lg: 12px;
   --radius-xl: 16px;
   --radius-2xl: 20px;
@@ -87,32 +95,39 @@
 /* ===== 深色主题 ===== */
 [data-theme="dark"] {
   /* ===== 主色调 ===== */
-  --primary-color: #818cf8;
-  --primary-hover: #6366f1;
-  --primary-active: #4f46e5;
-  --primary-light: #374151;
+  --primary-color: #8b9afc;
+  --primary-hover: #7c89fa;
+  --primary-active: #6b79f7;
+  --primary-light: #4b5563;
   --primary-dark: #3730a3;
+  --primary-soft: rgba(139,154,252,.16);
 
   /* ===== 功能色彩 ===== */
   --success-color: #34d399;
   --warning-color: #fbbf24;
   --error-color: #f87171;
   --info-color: #60a5fa;
+  /* 浅色背景（深色主题适配） */
+  --success-light: rgba(52, 211, 153, 0.18);
+  --warning-light: rgba(251, 191, 36, 0.18);
+  --error-light: rgba(248, 113, 113, 0.18);
+  --info-light: rgba(96, 165, 250, 0.18);
 
   /* ===== 背景色彩 ===== */
-  --bg-primary: #1e293b;
-  --bg-secondary: #334155;
-  --bg-tertiary: #475569;
-  --bg-hover: #3f4f5f;
-  --bg-active: #475569;
+  --bg-primary: #0f172a;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1f2937;
+  --bg-hover: #223048;
+  --bg-active: #2b3a55;
 
   /* ===== 边框颜色 ===== */
-  --border-color: #475569;
-  --border-hover: #64748b;
-  --border-active: #94a3b8;
+  --border-color: #2d3b52;
+  --border-hover: #3b4b66;
+  --border-active: #64748b;
+  --divider-color: #2d3b52;
 
   /* ===== 文字颜色 ===== */
-  --text-primary: #f1f5f9;
+  --text-primary: #e5e7eb;
   --text-secondary: #cbd5e1;
   --text-tertiary: #94a3b8;
   --text-placeholder: #64748b;
@@ -124,12 +139,6 @@
   --sidebar-bg: #1e293b;
   --header-bg: #1e293b;
   --input-bg: #334155;
-
-  /* ===== Agent相关颜色 ===== */
-  --agent-selector-bg: #818cf8;
-  --agent-selector-hover: #6366f1;
-  --agent-card-bg: #334155;
-  --agent-selected-bg: #1e40af;
 }
 
 /* ===== 全局基础样式 ===== */
@@ -137,7 +146,7 @@
   box-sizing: border-box;
 }
 
-body {
+html, body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;

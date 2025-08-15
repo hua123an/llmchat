@@ -102,7 +102,14 @@ export class ThemeManager {
    * 更新主题属性
    */
   private updateThemeAttribute(): void {
-    document.documentElement.setAttribute('data-theme', isDarkMode.value ? 'dark' : 'light');
+    const themeAttr = isDarkMode.value ? 'dark' : 'light';
+    // 在 html 和 body 同步设置，兼容所有样式选择器与弹层挂载到 body 的情况
+    try {
+      document.documentElement.setAttribute('data-theme', themeAttr);
+      document.body.setAttribute('data-theme', themeAttr);
+      document.documentElement.classList.toggle('dark', isDarkMode.value);
+      document.body.classList.toggle('dark', isDarkMode.value);
+    } catch {}
   }
 
   /**

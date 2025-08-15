@@ -10,13 +10,14 @@
           <label class="lbl">Providers</label>
           <div class="prov-list">
             <label v-for="p in providers" :key="p.name" class="prov-item">
-              <input type="checkbox" v-model="selected" :value="p.name" /> {{ p.name }}
+              <input type="checkbox" v-model="selected" :value="p.name" />
+              <span :title="p.name">{{ p.name }}</span>
             </label>
           </div>
         </div>
         <div class="row">
           <label class="lbl">Model (optional, for all)</label>
-          <el-input v-model="modelId" />
+          <el-input v-model="modelId" :title="modelId" />
         </div>
         <div class="row">
           <el-button type="primary" @click="run">Run</el-button>
@@ -24,7 +25,7 @@
       </div>
       <div class="results" v-if="results.length">
         <div class="res" v-for="r in results" :key="r.provider + r.model">
-          <div class="head">{{ r.provider }} / {{ r.model }}</div>
+          <div class="head" :title="r.provider + ' / ' + r.model">{{ r.provider }} / {{ r.model }}</div>
           <pre class="content">{{ r.content }}</pre>
         </div>
       </div>
@@ -61,15 +62,15 @@ const run = async () => {
 </script>
 
 <style scoped>
-.ab-body { display: grid; grid-template-columns: 1fr; gap: 12px; }
-.row { display: grid; grid-template-columns: 140px 1fr; gap: 10px; align-items: center; }
+.ab-body { display: grid; grid-template-columns: 1fr; gap: var(--spacing-sm); }
+.row { display: grid; grid-template-columns: 140px 1fr; gap: var(--spacing-sm); align-items: center; }
 .lbl { color: var(--text-secondary); }
-.prov-list { display: flex; gap: 12px; flex-wrap: wrap; }
-.prov-item { border: none; padding: 4px 8px; border-radius: 6px; }
-.results { display: grid; gap: 10px; }
-.res { border: none; border-radius: 8px; }
-.res .head { padding: 6px 10px; background: var(--bg-secondary); border-bottom: none; font-weight: 600; }
-.res .content { padding: 8px 10px; margin: 0; white-space: pre-wrap; }
+.prov-list { display: flex; gap: var(--spacing-sm); flex-wrap: wrap; }
+.prov-item { border: 1px solid var(--border-color); padding: 4px 8px; border-radius: var(--radius-sm); background: var(--bg-secondary); }
+.results { display: grid; gap: var(--spacing-sm); }
+.res { border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+.res .head { padding: 6px 10px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); font-weight: 600; color: var(--text-primary); }
+.res .content { padding: 8px 10px; margin: 0; white-space: pre-wrap; color: var(--text-primary); background: var(--bg-primary); border-radius: 0 0 var(--radius-md) var(--radius-md); }
 </style>
 
 

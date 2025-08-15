@@ -35,7 +35,22 @@ export async function fetchReadable(url: string): Promise<string> {
     console.log(`📄 前端请求网页内容: ${url}`);
     const startTime = Date.now();
     
-    const content = await (window as any).electronAPI.fetchReadable(url);
+    // 优先调用主进程提取；若在纯Web环境下无可用API，则回退到 server.js 的后端接口
+    let content = '';
+    try {
+      content = await (window as any).electronAPI.fetchReadable(url);
+    } catch {}
+    if (!content) {
+      try {
+        const resp = await fetch('/api/fetch-readable', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        const json = await resp.json();
+        if (json?.ok && json?.content) content = json.content;
+      } catch {}
+    }
     const elapsed = Date.now() - startTime;
     
     console.log(`✅ 网页内容获取完成: ${content.length} 字符, 耗时 ${elapsed}ms`);

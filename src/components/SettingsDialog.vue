@@ -22,7 +22,7 @@
             <h3 class="section-title">{{ t('settings.general.appearance') }}</h3>
             <div class="setting-item">
               <label class="setting-label">{{ t('settings.general.theme') }}</label>
-              <el-select v-model="currentTheme" @change="handleThemeChange" class="setting-control">
+              <el-select v-model="currentTheme" @change="handleThemeChange" class="setting-control" popper-class="wide-select-popper" :fit-input-width="false">
                 <el-option
                   v-for="option in themeOptions"
                   :key="option.value"
@@ -34,7 +34,7 @@
             
             <div class="setting-item">
               <label class="setting-label">{{ t('settings.general.language') }}</label>
-              <el-select v-model="currentLanguage" @change="handleLanguageChange" class="setting-control">
+              <el-select v-model="currentLanguage" @change="handleLanguageChange" class="setting-control" popper-class="wide-select-popper" :fit-input-width="false">
                 <el-option 
                   v-for="lang in supportedLanguages" 
                   :key="lang.code" 
@@ -49,7 +49,7 @@
             <h3 class="section-title">{{ t('settings.general.behavior') }}</h3>
             <div class="setting-item">
               <label class="setting-label">{{ t('settings.general.sendShortcut') }}</label>
-              <el-select v-model="sendShortcut" class="setting-control">
+              <el-select v-model="sendShortcut" class="setting-control" popper-class="wide-select-popper" :fit-input-width="false">
                 <el-option :label="t('shortcut.enter')" value="enter"></el-option>
                 <el-option :label="t('shortcut.ctrlEnter')" value="ctrl-enter"></el-option>
               </el-select>
@@ -62,6 +62,64 @@
           </div>
         </el-tab-pane>
 
+
+        <!-- AI模型配置 -->
+        <el-tab-pane :label="t('settings.tabs.models')" name="models">
+          <div class="setting-section">
+            <h3 class="section-title">{{ t('settings.models.title', 'AI 提供商配置') }}</h3>
+            <div class="providers-editor">
+              <div class="providers-toolbar">
+                <div class="hint">{{ t('settings.providers.description', '配置您的AI服务提供商和API密钥') }}</div>
+                <div class="right">
+                  <el-button type="primary" size="small" @click="addProvider">
+                    {{ t('settings.providers.add', '添加提供商') }}
+                  </el-button>
+                </div>
+              </div>
+              
+              <div class="providers-table">
+                <div class="thead sticky">
+                  <div class="th name">{{ t('settings.providers.name', '名称') }}</div>
+                  <div class="th baseurl">Base URL</div>
+                  <div class="th key">API Key</div>
+                  <div class="th actions">{{ t('settings.providers.actions', '操作') }}</div>
+                </div>
+                <div class="tbody">
+                  <div class="tr" v-for="(p, idx) in providerList" :key="idx">
+                    <div class="td name">
+                      <el-input v-model="p.name" size="small" @input="saveProvidersDebounced()" placeholder="Ollama"/>
+                    </div>
+                    <div class="td baseurl">
+                      <el-input v-model="p.baseUrl" size="small" @input="saveProvidersDebounced()" placeholder="http://localhost:11434"/>
+                    </div>
+                    <div class="td key">
+                      <div class="key-inline">
+                        <el-input 
+                          v-model="p.__keyInput" 
+                          size="small" 
+                          :type="p.__showKey ? 'text' : 'password'" 
+                          :placeholder="p.__hasKey && !p.__keyInput ? t('settings.providers.keyExists', 'API密钥已设置') : t('settings.providers.keyPlaceholder', '输入API密钥')"
+                          @focus="handleKeyInputFocus(p)"
+                        />
+                        <div class="key-actions">
+                          <el-button v-if="p.__hasKey" size="small" @click="toggleKeyVisibility(p)">{{ p.__showKey ? t('common.hide', '隐藏') : t('common.show', '显示') }}</el-button>
+                          <el-button type="primary" size="small" @click="saveKey(p)" :disabled="!p.__keyInput || p.__keyInput.includes('...')">{{ t('common.save', '保存') }}</el-button>
+                          <el-button v-if="p.__hasKey" type="danger" size="small" @click="removeKey(p)">{{ t('common.delete', '删除') }}</el-button>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="td actions">
+                      <div class="row-actions">
+                        <el-button size="small" @click="testProvider(p)">{{ t('settings.providers.test', '测试') }}</el-button>
+                        <el-button type="danger" size="small" @click="() => { removeProvider(idx); saveProvidersDebounced(); }">{{ t('common.delete', '删除') }}</el-button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-tab-pane>
 
         <!-- 快捷键 -->
         <el-tab-pane :label="t('settings.tabs.shortcuts')" name="shortcuts">
@@ -82,7 +140,22 @@
             <div class="about-info">
               <div class="app-icon">💬</div>
               <h2 class="app-name">ChatLLM</h2>
-              <p class="app-version">{{ t('settings.about.version') }} 1.0.0</p>
+              <p class="app-version">{{ t('settings.about.version') }} {{ versionText }}</p>
+              <div style="margin-top:12px">
+                <el-alert type="info" :closable="false" show-icon>
+                  <template #title>
+                    <b>2.0.1</b> 更新内容
+                  </template>
+                  <div>
+                    <ul style="margin: 8px 0 0 18px; padding:0; line-height:1.6;">
+                      <li>统一下拉组件，Provider/Model/Workspace 全量替换</li>
+                      <li>文生图支持进度条与取消按钮</li>
+                      <li>补齐 i18n 与 aria-label，提高无障碍</li>
+                      <li>修复重复 i18n 键与类型不匹配问题</li>
+                    </ul>
+                  </div>
+                </el-alert>
+              </div>
               <p class="app-description">
                 {{ t('settings.about.description') }}
               </p>
@@ -102,7 +175,7 @@
                 </el-button>
                 <el-switch v-model="autoCheckUpdate" active-text="启动自检" inactive-text="手动检查" @change="applyUpdateConfig" />
                 <el-switch v-model="autoDownloadUpdate" active-text="自动下载" inactive-text="手动下载" @change="applyUpdateConfig" />
-                <el-select v-model="updateChannel" class="setting-control" style="width: 120px" @change="applyUpdateConfig">
+                <el-select v-model="updateChannel" class="setting-control" style="width: 120px" @change="applyUpdateConfig" popper-class="wide-select-popper" :fit-input-width="false">
                   <el-option label="stable" value="latest" />
                   <el-option label="beta" value="beta" />
                 </el-select>
@@ -118,7 +191,7 @@
             <h3 class="section-title">联网搜索</h3>
             <div class="setting-item">
               <label class="setting-label">上下文规模</label>
-              <el-select v-model="searchContextSize" class="setting-control" @change="saveSettings">
+              <el-select v-model="searchContextSize" class="setting-control" @change="saveSettings" popper-class="wide-select-popper" :fit-input-width="false">
                 <el-option label="低 (low)" value="low" />
                 <el-option label="中 (medium)" value="medium" />
                 <el-option label="高 (high)" value="high" />
@@ -150,6 +223,13 @@
               </div>
             </div>
           </div>
+          <div class="setting-section">
+            <h3 class="section-title">知识库检索</h3>
+            <div class="setting-item">
+              <label class="setting-label">启用发送时知识库检索</label>
+              <el-switch v-model="enableKBRetrieval" @change="saveSettings" />
+            </div>
+          </div>
         </el-tab-pane>
 
         
@@ -164,7 +244,7 @@
             </div>
             <div class="setting-item">
               <label class="setting-label">{{ t('tools.ocrLang') }}</label>
-              <el-select v-model="ocrLang" class="setting-control">
+              <el-select v-model="ocrLang" class="setting-control" popper-class="wide-select-popper" :fit-input-width="false">
                 <el-option label="English (eng)" value="eng"></el-option>
                 <el-option label="中文简体 (chi_sim)" value="chi_sim"></el-option>
               </el-select>
@@ -203,6 +283,14 @@ import { ElMessage } from 'element-plus';
 import { themeManager } from '../utils/themeManager';
 import { supportedLocales, switchLanguage, getCurrentLanguage } from '../locales';
 import { listDocs } from '../services/rag/store';
+
+// 版本号：从构建注入或从 window 兜底
+const appVersion = (import.meta as any).env?.APP_VERSION || (typeof window !== 'undefined' ? (window as any).__APP_VERSION__ : '');
+if (!appVersion && typeof window !== 'undefined' && (window as any).electronAPI?.getAppVersion) {
+  (window as any).electronAPI.getAppVersion().then((v: string) => {
+    try { (document.querySelector('.app-version') as HTMLElement).innerText = `${t('settings.about.version')} ${v || ''}` } catch {}
+  }).catch(() => {});
+}
 
 const store = useChatStore();
 const activeTab = ref('general');
@@ -246,10 +334,182 @@ const wGoogle = ref<number>(4);
 const wBing = ref<number>(3);
 const wBaidu = ref<number>(2);
 const wDuck = ref<number>(1);
+const enableKBRetrieval = ref<boolean>(false);
 
-// Provider 相关逻辑已移除
+// Provider 管理逻辑
+const providerList = ref<Array<{ 
+  name: string; 
+  baseUrl: string; 
+  __keyInput?: string; 
+  __hasKey?: boolean; 
+  __showKey?: boolean;
+}>>([]);
 
-// 不再支持从配置文件导入，后续均在此处直接管理
+let saveProvidersTimeout: any = null;
+
+// 添加提供商
+const addProvider = () => {
+  providerList.value.push({
+    name: '',
+    baseUrl: '',
+    __keyInput: '',
+    __hasKey: false,
+    __showKey: false
+  });
+};
+
+// 删除提供商
+const removeProvider = (index: number) => {
+  providerList.value.splice(index, 1);
+};
+
+// 防抖保存提供商
+const saveProvidersDebounced = () => {
+  if (saveProvidersTimeout) clearTimeout(saveProvidersTimeout);
+  saveProvidersTimeout = setTimeout(() => {
+    saveProviders();
+  }, 500);
+};
+
+// 保存提供商配置
+const saveProviders = async () => {
+  try {
+    // 过滤掉空的提供商
+    const validProviders = providerList.value
+      .filter(p => p.name.trim() && p.baseUrl.trim())
+      .map(p => ({ name: p.name.trim(), baseUrl: p.baseUrl.trim() }));
+    
+    const result = await (window as any).electronAPI?.saveProviders?.(validProviders);
+    if (result?.ok) {
+      ElMessage.success(t('settings.providers.saveSuccess', '提供商配置已保存'));
+    } else {
+      throw new Error(result?.message || 'Save failed');
+    }
+  } catch (error: any) {
+    console.error('Save providers failed:', error);
+    ElMessage.error(t('settings.providers.saveError', '保存失败: ') + error.message);
+  }
+};
+
+// 处理API密钥输入焦点
+const handleKeyInputFocus = async (provider: any) => {
+  if (!provider.__keyInput && provider.__hasKey) {
+    // 显示预览
+    try {
+      const result = await (window as any).electronAPI?.getProviderKeyPreview?.(provider.name);
+      if (result?.preview) {
+        provider.__keyInput = result.preview;
+      }
+    } catch (error) {
+      console.warn('Failed to get key preview:', error);
+    }
+  }
+};
+
+// 切换密钥可见性
+const toggleKeyVisibility = async (provider: any) => {
+  if (!provider.__showKey && provider.__hasKey) {
+    try {
+      const result = await (window as any).electronAPI?.getProviderKeyPreview?.(provider.name);
+      if (result?.preview) {
+        provider.__keyInput = result.preview;
+      }
+    } catch (error) {
+      console.warn('Failed to get key preview:', error);
+    }
+  }
+  provider.__showKey = !provider.__showKey;
+};
+
+// 保存API密钥
+const saveKey = async (provider: any) => {
+  if (!provider.__keyInput || provider.__keyInput.includes('...')) return;
+  
+  try {
+    const result = await (window as any).electronAPI?.setProviderKey?.(provider.name, provider.__keyInput);
+    if (result?.ok) {
+      provider.__hasKey = true;
+      ElMessage.success(t('settings.providers.keySuccess', 'API密钥已保存'));
+      // 更新为预览模式
+      const previewResult = await (window as any).electronAPI?.getProviderKeyPreview?.(provider.name);
+      if (previewResult?.preview) {
+        provider.__keyInput = previewResult.preview;
+      }
+    } else {
+      throw new Error(result?.message || 'Save key failed');
+    }
+  } catch (error: any) {
+    console.error('Save key failed:', error);
+    ElMessage.error(t('settings.providers.keyError', '保存密钥失败: ') + error.message);
+  }
+};
+
+// 删除API密钥
+const removeKey = async (provider: any) => {
+  try {
+    const result = await (window as any).electronAPI?.removeProviderKey?.(provider.name);
+    if (result?.ok) {
+      provider.__hasKey = false;
+      provider.__keyInput = '';
+      provider.__showKey = false;
+      ElMessage.success(t('settings.providers.keyRemoved', 'API密钥已删除'));
+    } else {
+      throw new Error(result?.message || 'Remove key failed');
+    }
+  } catch (error: any) {
+    console.error('Remove key failed:', error);
+    ElMessage.error(t('settings.providers.removeKeyError', '删除密钥失败: ') + error.message);
+  }
+};
+
+// 测试提供商连接
+const testProvider = async (provider: any) => {
+  if (!provider.name.trim()) {
+    ElMessage.warning(t('settings.providers.nameRequired', '请输入提供商名称'));
+    return;
+  }
+  
+  try {
+    const result = await (window as any).electronAPI?.testProvider?.(provider.name);
+    if (result?.ok) {
+      ElMessage.success(t('settings.providers.testSuccess', '连接测试成功'));
+    } else {
+      throw new Error(result?.message || 'Test failed');
+    }
+  } catch (error: any) {
+    console.error('Test provider failed:', error);
+    ElMessage.error(t('settings.providers.testError', '连接测试失败: ') + error.message);
+  }
+};
+
+// 加载提供商配置
+const loadProviders = async () => {
+  try {
+    // 加载提供商列表
+    const providers = await (window as any).electronAPI?.getProviders?.() || [];
+    providerList.value = providers.map((p: any) => ({
+      name: p.name || '',
+      baseUrl: p.baseUrl || '',
+      __keyInput: '',
+      __hasKey: false,
+      __showKey: false
+    }));
+    
+    // 检查每个提供商的密钥状态
+    for (const provider of providerList.value) {
+      if (provider.name) {
+        try {
+          const result = await (window as any).electronAPI?.hasProviderKey?.(provider.name);
+          provider.__hasKey = result?.hasKey || false;
+        } catch (error) {
+          console.warn('Failed to check key for', provider.name, error);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Load providers failed:', error);
+  }
+};
 
 // 快捷键列表
 const isMac = navigator.platform.includes('Mac');
@@ -405,7 +665,8 @@ const handleSave = () => {
     searchRetry: searchRetry.value,
     searchConcurrency: searchConcurrency.value,
     searchWeights: { google: wGoogle.value, bing: wBing.value, baidu: wBaidu.value, duck: wDuck.value },
-    updateBaseUrl: updateBaseUrl.value
+    updateBaseUrl: updateBaseUrl.value,
+    enableKBRetrieval: enableKBRetrieval.value
   };
   
   localStorage.setItem('appSettings', JSON.stringify(settings));
@@ -424,6 +685,7 @@ const saveSettings = () => {
     cfg.searchRetry = searchRetry.value;
     cfg.searchConcurrency = searchConcurrency.value;
     cfg.searchWeights = { google: wGoogle.value, bing: wBing.value, baidu: wBaidu.value, duck: wDuck.value };
+    cfg.enableKBRetrieval = enableKBRetrieval.value;
     localStorage.setItem('appSettings', JSON.stringify(cfg));
   } catch {}
 };
@@ -459,18 +721,27 @@ const loadSettings = () => {
       wBing.value = Number(sw.bing ?? 3);
       wBaidu.value = Number(sw.baidu ?? 2);
       wDuck.value = Number(sw.duck ?? 1);
+      enableKBRetrieval.value = !!settings.enableKBRetrieval;
     }
   } catch (error) {
     console.error(t('settings.messages.loadError'), error);
   }
 };
 
-onMounted(() => {
+const appVersionEnv = (import.meta as any).env?.APP_VERSION || (typeof window !== 'undefined' ? (window as any).__APP_VERSION__ : '');
+const appVersionRef = ref<string>(appVersionEnv || '');
+const versionText = computed(() => appVersionRef.value || '');
+
+onMounted(async () => {
+  if (!appVersionRef.value && (window as any).electronAPI?.getAppVersion) {
+    try { appVersionRef.value = await (window as any).electronAPI.getAppVersion(); } catch {}
+  }
   loadSettings();
   // 同步当前语言
   currentLanguage.value = getCurrentLanguage();
   refreshDocs();
-  // providers 相关逻辑已移除
+  // 加载提供商配置
+  loadProviders();
   // 应用一次默认更新配置
   try { applyUpdateConfig(); } catch {}
 });

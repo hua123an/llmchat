@@ -1,7 +1,7 @@
 {
   "name": "chatllm",
   "productName": "ChatLLM",
-  "version": "1.1.0",
+  "version": "2.0.1",
   "description": "一个强大的多模型AI聊天应用，支持知识库、联网搜索等功能",
   "author": {
     "name": "ChatLLM Team",
@@ -18,9 +18,11 @@
   "main": "dist-electron/main.mjs",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
+    "build": "node scripts/generate-announcements.cjs && cross-env APP_VERSION=$npm_package_version vue-tsc --noEmit && vite build",
+    "build:web": "vite build",
+    "build:electron": "electron-builder --config.directories.output=dist-build",
     "build:app": "node scripts/gen-icon.js && npm run build && npm run build:check && electron-builder --config.directories.output=dist-build",
-    "release": "node scripts/release.cjs",
+    "release": "node scripts/generate-announcements.cjs && node scripts/release.cjs",
     "release:manual": "npm run build:app && node scripts/upload-updates.cjs",
     "create-download-page": "node scripts/create-download-page.cjs",
     "build:check": "node scripts/build-check.js",
@@ -33,7 +35,18 @@
     "clean": "powershell -ExecutionPolicy Bypass -File clean.ps1",
     "clean:all": "npm run clean && rimraf node_modules package-lock.json",
     "fresh": "npm run clean:all && npm install",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "deploy": "node scripts/deploy.js",
+    "deploy:server": "bash scripts/server-deploy.sh",
+    "docker:build": "docker build -t llmchat:latest .",
+    "docker:run": "docker run -d -p 80:80 -p 3001:3001 --name llmchat llmchat:latest",
+    "docker:compose": "docker-compose up -d",
+    "docker:stop": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
+    "lint:check": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts"
   },
   "dependencies": {
     "ssh2-sftp-client": "^10.0.3",
@@ -55,6 +68,7 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "@vitejs/plugin-vue": "^5.0.4",
     "electron": "^30.0.1",
     "electron-builder": "^24.13.3",

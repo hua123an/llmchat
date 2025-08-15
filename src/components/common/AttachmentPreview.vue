@@ -2,7 +2,7 @@
   <el-dialog v-model="visible" :title="att?.name || 'Attachment'" width="60%" append-to-body>
     <div v-if="att">
       <div v-if="att.dataUrl && att.mime?.startsWith('image/')" class="img-wrap">
-        <img :src="att.dataUrl" :alt="att.name" />
+        <img :src="att.dataUrl" :alt="att.name" loading="lazy" decoding="async" />
       </div>
       <div v-else class="text-wrap">
         <pre class="text">{{ att.textSnippet || '[No Preview]' }}</pre>
@@ -35,9 +35,9 @@ watch(() => props.attachment, v => att.value = v || null);
 
 <style scoped>
 .img-wrap { display:flex; justify-content:center; }
-.img-wrap img { max-width: 100%; border: none; border-radius: 8px; }
-.text-wrap { max-height: 60vh; overflow: auto; border: none; border-radius: 8px; padding: 8px; }
-.text { white-space: pre-wrap; word-wrap: break-word; }
+.img-wrap img { max-width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+.text-wrap { max-height: 60vh; overflow: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: var(--spacing-md); background: var(--bg-primary); box-shadow: var(--shadow-sm); }
+.text { white-space: pre-wrap; word-wrap: break-word; color: var(--text-primary); }
 </style>
 
 

@@ -6,6 +6,9 @@
       <div class="panel-header">
         <span class="title">{{ t('settings.providers.title') }}</span>
         <div class="header-actions">
+          <el-button type="success" size="small" @click="refreshOllamaModels" :loading="refreshing" :disabled="!hasOllamaProvider">
+            🦙 {{ t('settings.providers.refreshOllama', '刷新Ollama') }}
+          </el-button>
           <el-button type="primary" size="small" @click="addProvider">{{ t('settings.providers.add') }}</el-button>
           <button class="close-btn" @click="toggle" :title="t('common.close')">×</button>
         </div>
@@ -60,17 +63,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useChatStore } from '../store/chat';
+import { ElMessage } from 'element-plus';
 
 const store = useChatStore();
 const { t } = useI18n();
 const isOpen = ref(false);
+const refreshing = ref(false);
 const toggle = () => { isOpen.value = !isOpen.value; };
 
 type ProviderItem = { name: string; baseUrl: string; __hasKey?: boolean; __keyInput?: string; __showKey?: boolean };
 const providerList = ref<ProviderItem[]>([]);
+
+// 检测是否有Ollama提供商
+const hasOllamaProvider = computed(() => 
+  providerList.value.some(p => 
+    /localhost:11434/i.test(p.baseUrl) || 
+    /ollama/i.test(p.name.toLowerCase())
+  )
+);
 const reloadProviders = async () => {
   await store.loadProviders();
   providerList.value = (store.providers || []).map((p: any) => ({ name: p.name, baseUrl: p.baseUrl, __hasKey: false, __keyInput: '', __showKey: false }));
@@ -166,7 +179,46 @@ const handleKeyInputFocus = (p: ProviderItem) => {
 
 const testProvider = async (p: ProviderItem) => { if (!p.name) return; await (window as any).electronAPI.testProvider(p.name); };
 
-
+// 刷新Ollama模型列表
+const refreshOllamaModels = async () => {
+  if (!hasOllamaProvider.value) {
+    ElMessage.warning(t('settings.providers.noOllama', '请先添加Ollama提供商'));
+    return;
+  }
+  
+  refreshing.value = true;
+  
+  try {
+    // 找到Ollama提供商的Base URL
+    const ollamaProvider = providerList.value.find(p => 
+      /localhost:11434/i.test(p.baseUrl) || 
+      /ollama/i.test(p.name.toLowerCase())
+    );
+    
+    const baseUrl = ollamaProvider?.baseUrl || 'http://localhost:11434';
+    
+    console.log('🦙 正在刷新Ollama模型列表...');
+    const result = await (window as any).electronAPI?.refreshOllamaModels?.(baseUrl);
+    
+    if (result?.ok) {
+      ElMessage.success(`🦙 ${result.message} (${result.count} 个模型)`);
+      console.log('🦙 Ollama模型列表:', result.models);
+      
+      // 触发模型列表更新，让前端重新加载模型
+      if (result.count > 0) {
+        store.loadProviders();
+        ElMessage.info('模型列表已更新，请在聊天界面重新选择模型');
+      }
+    } else {
+      throw new Error(result?.message || '刷新失败');
+    }
+  } catch (error: any) {
+    console.error('🦙 刷新Ollama模型失败:', error);
+    ElMessage.error(`刷新失败: ${error.message || error}`);
+  } finally {
+    refreshing.value = false;
+  }
+};
 
 onMounted(async () => {
   await reloadProviders();
@@ -184,13 +236,15 @@ onMounted(async () => {
 <style scoped>
 .providers-floating { position: fixed; right: 128px; bottom: 20px; z-index: 2000; }
 .providers-floating.open { inset: 0; right: auto; bottom: auto; display: flex; align-items: center; justify-content: center; }
-.floating-toggle { width: 44px; height: 44px; border-radius: 12px; border: none; background: var(--bg-secondary); color: var(--text-primary); cursor: pointer; box-shadow: none; }
+.floating-toggle { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer; box-shadow: var(--shadow-sm); }
+.floating-toggle:hover { background: var(--bg-hover); box-shadow: var(--shadow-md); }
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 0; }
-.panel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(1200px, 90vw); height: min(860px, 90vh); overflow: hidden; background: var(--bg-primary); border: none; border-radius: 16px; box-shadow: 0 25px 40px rgba(0,0,0,0.35); display:flex; flex-direction: column; z-index: 1; }
-.panel-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: none; gap: 8px; }
+.panel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(1200px, 90vw); height: min(860px, 90vh); overflow: hidden; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); display:flex; flex-direction: column; z-index: 1; }
+.panel-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--border-color); gap: 8px; }
 .header-actions { display: flex; align-items: center; gap: 8px; }
 .panel-body { padding: 12px; overflow: auto; }
-.close-btn { background: transparent; border: 0; color: var(--text-secondary); font-size: 18px; cursor: pointer; }
+.close-btn { background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-secondary); font-size: 18px; cursor: pointer; border-radius: 8px; padding: 0 6px; }
+.close-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
 
 .providers-table .thead, .providers-table .tr {
   display: grid;

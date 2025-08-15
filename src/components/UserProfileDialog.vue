@@ -8,12 +8,12 @@
   >
     <div class="profile-header">
       <div class="avatar">
-        <img v-if="store.userAvatar" :src="store.userAvatar" alt="avatar" />
+        <img v-if="store.userAvatar" :src="store.userAvatar" alt="avatar" loading="lazy" decoding="async" />
         <span v-else>{{ store.userInitial }}</span>
       </div>
       <div class="basic">
-        <div class="name">{{ store.user.name }}</div>
-        <div class="email">{{ store.user.email }}</div>
+        <div class="name" :title="store.user.name">{{ store.user.name }}</div>
+        <div class="email" :title="store.user.email">{{ store.user.email }}</div>
       </div>
     </div>
 
@@ -90,10 +90,24 @@ const removeAvatar = () => {
 </script>
 
 <style scoped>
+.user-profile-dialog :deep(.el-dialog) {
+  border-radius: var(--radius-lg);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
+}
 .user-profile-dialog :deep(.el-dialog__header) {
   background: var(--header-bg);
   color: var(--text-primary);
   border-bottom: none;
+}
+.user-profile-dialog :deep(.el-dialog__body) {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+.user-profile-dialog :deep(.el-dialog__footer) {
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
 }
 .profile-header {
   display: flex;
@@ -121,5 +135,16 @@ const removeAvatar = () => {
 .basic .name { font-weight: 600; color: var(--text-primary); }
 .basic .email { color: var(--text-secondary); font-size: 12px; }
 .profile-form { margin-top: 12px; }
+
+.profile-form :deep(.el-form-item) { margin-bottom: var(--spacing-md); }
+.profile-form :deep(.el-input__wrapper) {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+  border-radius: var(--radius-md);
+}
+.dialog-footer { display:flex; justify-content:flex-end; gap: var(--spacing-sm); }
+.dialog-footer :deep(.el-button) { border-radius: var(--radius-md); }
+.dialog-footer :deep(.el-button--primary) { background: var(--primary-color); border-color: var(--primary-color); }
 </style>
 

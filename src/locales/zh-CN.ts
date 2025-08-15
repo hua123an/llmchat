@@ -112,6 +112,8 @@ export default {
       actions: '操作',
       add: '新增服务商',
       test: '测试',
+      refreshOllama: '刷新Ollama',
+      noOllama: '请先添加Ollama提供商',
       autosaveHint: '已开启自动保存（输入即保存）',
       saveSuccess: '服务商配置已保存',
       saveFailed: '保存失败',
@@ -154,7 +156,9 @@ export default {
     clear: '清空',
     importSuccess: '已导入到知识库',
     importFailure: '导入失败',
-    notTextAttachment: '该附件不包含可导入的文本内容'
+    notTextAttachment: '该附件不包含可导入的文本内容',
+    clearConfirm: '确认清空本地知识库？该操作不可恢复。',
+    clearSuccess: '知识库已清空'
   },
 
   // 聊天界面
@@ -179,7 +183,8 @@ export default {
       selectModel: '选择模型',
       loadingProviders: '正在加载服务商...',
       systemPrompt: '设置系统提示...'
-    }
+    },
+    autoRoute: '自动路由'
   },
 
 
@@ -403,5 +408,124 @@ export default {
     clearedChat: '聊天已清空',
     sidebarToggleInfo: '侧边栏切换功能待实现',
     budgetWarn: '已接近本月令牌预算阈值'
+  },
+
+  // 图像生成
+  imageGeneration: {
+    title: 'AI图像生成',
+    prompt: '图像描述',
+    promptPlaceholder: '描述您想要生成的图像...',
+    size: '图像尺寸',
+    model: '生成模型',
+    provider: '服务商',
+    generate: '生成图像',
+    generating: 'AI正在为您创作图像，请稍候...',
+    download: '下载',
+    copyToClipboard: '复制到剪贴板',
+    addToChat: '添加到对话',
+    preview: '图像预览',
+    examplePrompts: '试试这些示例：',
+    emptyState: '在左侧输入描述，开始AI创作之旅',
+    actions: {
+      download: '下载图像',
+      copy: '复制图像',
+      chat: '添加到对话'
+    }
+  },
+
+  // 消息操作
+  messageActions: {
+    copy: '复制',
+    edit: '编辑',
+    delete: '删除',
+    regenerate: '重新生成',
+    continue: '继续生成',
+    save: '保存到提示词库'
+  },
+
+  // 附件预览
+  attachmentPreview: {
+    preview: '预览',
+    download: '下载',
+    open: '打开',
+    close: '关闭'
+  },
+
+  // 代码块
+  codeBlock: {
+    copy: '复制代码',
+    copied: '已复制',
+    expand: '展开',
+    collapse: '收起'
+  },
+
+  // 用户资料
+  userProfile: {
+    title: '用户资料',
+    name: '姓名',
+    email: '邮箱',
+    avatar: '头像',
+    save: '保存',
+    cancel: '取消',
+    uploadAvatar: '上传头像',
+    removeAvatar: '移除头像'
+  },
+
+  
+
+  // 提示词库
+  prompts: {
+    title: '提示词库',
+    add: '添加提示词',
+    edit: '编辑提示词',
+    delete: '删除提示词',
+    category: '分类',
+    content: '内容',
+    name: '名称',
+    description: '描述',
+    search: '搜索提示词',
+    noResults: '没有找到匹配的提示词'
+  },
+
+  // 插件管理
+  plugins: {
+    title: '插件管理',
+    enable: '启用',
+    disable: '禁用',
+    configure: '配置',
+    description: '描述',
+    version: '版本',
+    author: '作者',
+    status: '状态',
+    active: '活跃',
+    inactive: '非活跃'
+  },
+
+  // 历史搜索
+  historySearch: {
+    title: '搜索历史消息',
+    search: '搜索',
+    searchPlaceholder: '输入关键词搜索...',
+    category: '分类',
+    dateRange: '日期范围',
+    results: '搜索结果',
+    noResults: '没有找到匹配的消息',
+    clearSearch: '清空搜索',
+    advancedSearch: '高级搜索',
+    allCategories: '全部分类'
+  },
+
+  // A/B测试
+  abTest: {
+    title: 'A/B测试',
+    provider: '服务商',
+    model: '模型',
+    prompt: '提示词',
+    runTest: '运行测试',
+    results: '测试结果',
+    comparison: '对比结果',
+    winner: '优胜者',
+    tie: '平局',
+    noWinner: '无优胜者'
   }
 };
