@@ -9,6 +9,8 @@
 支持知识库、联网搜索、文件处理等功能，让AI助手成为你的智能工作伙伴
 
 [![GitHub release](https://img.shields.io/github/release/hua123an/llmchat.svg)](https://github.com/hua123an/llmchat/releases)
+[![Build](https://img.shields.io/github/actions/workflow/status/hua123an/llmchat/build-and-release.yml?label=CI%2FRelease)](https://github.com/hua123an/llmchat/actions)
+[![Discussions](https://img.shields.io/github/discussions/hua123an/llmchat?color=%23525CEB)](https://github.com/hua123an/llmchat/discussions)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](https://github.com/hua123an/llmchat/releases)
 

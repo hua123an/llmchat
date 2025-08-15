@@ -78,8 +78,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download all artifacts
+      - name: Download Windows artifacts
         uses: actions/download-artifact@v4
+        with:
+          name: build-win-x64
+          path: dist-build
 
       - name: Get version
         id: version
@@ -90,95 +93,18 @@ jobs:
             echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Generate changelog
+      - name: Generate changelog (from tag if available)
         id: changelog
         run: |
-          cat > CHANGELOG.md << 'EOF'
-          # 🎉 ChatLLM v2.0.0 - 重大架构升级
-
-          ## ✨ 新功能
-
-          ### 🚨 错误处理增强
-          - 全局错误边界组件，提供优雅的错误恢复
-          - 智能网络重试机制，提升连接稳定性
-          - 用户友好的错误通知系统
-
-          ### 📊 性能监控系统
-          - 实时FPS、内存、网络监控
-          - 性能健康评分系统
-          - 瓶颈分析和优化建议
-          - 可视化性能图表
-
-          ### 📱 响应式设计优化
-          - 完美的移动端适配
-          - 触控友好的交互优化
-          - 智能断点系统
-          - 响应式组件库
-
-          ### 🌍 国际化支持
-          - 支持8种语言：中文、英语、日语、韩语、西班牙语、法语、德语、俄语
-          - 智能语言检测
-          - 完整的本地化配置
-          - 类型安全的翻译系统
-
-          ### 🎨 主题系统扩展
-          - 动态主题切换，支持多种过渡动画
-          - 自定义主题创建和编辑
-          - 主题导入/导出功能
-          - 内置浅色/深色主题
-
-          ## 🏗️ 架构改进
-
-          ### 重构亮点
-          - **完全模块化设计** - 基于单一职责原则的组件架构
-          - **依赖注入系统** - 灵活的服务管理和测试友好设计
-          - **Vue 3 + Composition API** - 现代化的响应式状态管理
-          - **TypeScript严格模式** - 类型安全的开发体验
-          - **测试就绪基础设施** - 完整的单元测试框架
-
-          ### 性能提升
-          - 启动速度提升 60%
-          - 内存使用优化 40%
-          - 渲染性能提升 50%
-          - 更流畅的用户交互体验
-
-          ## 🔧 技术栈升级
-
-          - Vue 3.6 with Composition API
-          - TypeScript 5.2+
-          - Pinia 状态管理
-          - Vue-i18n 国际化
-          - Element Plus UI 组件库
-          - Vitest 测试框架
-
-          ## 📝 使用说明
-
-          1. **多语言支持**：在设置中可切换界面语言
-          2. **主题定制**：支持创建和导入自定义主题
-          3. **性能监控**：可在设置中启用性能监控面板
-          4. **响应式布局**：自动适配不同屏幕尺寸
-
-          ## 🐛 修复内容
-
-          - 修复了多个内存泄漏问题
-          - 优化了网络请求错误处理
-          - 改进了文件上传稳定性
-          - 修复了主题切换时的闪烁问题
-
-          ## ⚠️ 重要更新
-
-          此版本包含重大架构更改，建议备份现有配置后升级。首次启动可能需要重新配置某些设置。
-
-          ---
-          
-          **完整更新日志请查看：** [GitHub Releases](https://github.com/hua123an/llmchat/releases)
-          
-          **反馈问题：** [GitHub Issues](https://github.com/hua123an/llmchat/issues)
-          EOF
-
-          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
-          cat CHANGELOG.md >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          if [ -f CHANGELOG.md ]; then
+            echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+            awk 'BEGIN{p=0} /^## \[?2\.0\.1\]?/{p=1} /^## \[?[0-9]/{if(p){exit}} p{print} END{if(!p) print "ChatLLM Release"}' CHANGELOG.md >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+            echo "ChatLLM Release" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create Release
         id: create_release
@@ -192,14 +118,14 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload Windows artifacts
+      - name: Upload Windows installer
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: build-win-x64/ChatLLM-2.0.0-x64.exe
-          asset_name: ChatLLM-2.0.0-Windows-x64.exe
+          asset_path: dist-build/ChatLLM-*x64.exe
+          asset_name: ChatLLM-${{ steps.version.outputs.VERSION }}-Windows-x64.exe
           asset_content_type: application/octet-stream
         continue-on-error: true
 
@@ -209,8 +135,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: build-win-x64/ChatLLM-2.0.0-x64-portable.exe
-          asset_name: ChatLLM-2.0.0-Windows-x64-Portable.exe
+          asset_path: dist-build/ChatLLM-*x64-portable.exe
+          asset_name: ChatLLM-${{ steps.version.outputs.VERSION }}-Windows-x64-Portable.exe
           asset_content_type: application/octet-stream
         continue-on-error: true
 
