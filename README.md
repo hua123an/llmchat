@@ -64,8 +64,8 @@
 访问 [下载页面](https://huaan666.site/update/download.html) 获取最新版本
 
 #### 方式二：直接下载
-- **安装版**: [ChatLLM-2.0.1-x64.exe](https://github.com/hua123an/llmchat/releases/download/v2.0.1/ChatLLM-2.0.1-x64.exe)
-- **便携版**: [ChatLLM-2.0.1-x64-portable.exe](https://github.com/hua123an/llmchat/releases/download/v2.0.1/ChatLLM-2.0.1-x64-portable.exe)
+- **安装版**: [ChatLLM-2.0.2-x64.exe](https://github.com/hua123an/llmchat/releases/download/v2.0.2/ChatLLM-2.0.2-x64.exe)
+- **便携版**: [ChatLLM-2.0.2-x64-portable.exe](https://github.com/hua123an/llmchat/releases/download/v2.0.2/ChatLLM-2.0.2-x64-portable.exe)
 
 #### 方式三：GitHub Releases
 访问 [GitHub Releases](https://github.com/hua123an/llmchat/releases) 页面下载
