@@ -1,11 +1,17 @@
 import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router';
 import ChatView from '../views/ChatView.vue';
+import KnowledgeView from '../views/KnowledgeView.vue';
 
 const routes = [
   {
     path: '/',
     name: 'Chat',
     component: ChatView,
+  },
+  {
+    path: '/knowledge',
+    name: 'Knowledge',
+    component: KnowledgeView,
   }
 ];
 

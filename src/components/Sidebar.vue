@@ -45,7 +45,7 @@
             <AppSelect
               v-model="providerName"
               size="small"
-              :options="providerList.map(p => ({ label: p.name, value: p.name, title: p.name }))"
+              :options="providerOptions"
               placeholder="Provider"
               aria-label="选择服务商"
               @change="onProviderChange"
@@ -117,6 +117,11 @@
         <span class="nav-text">插件</span>
       </div>
       
+      <div :class="['nav-item', { active: activeNavItem === 'knowledge' } ]" @click="handleNavClick('knowledge')">
+        <div class="nav-icon">📚</div>
+        <span class="nav-text">知识库</span>
+      </div>
+
       <div :class="['nav-item', { active: activeNavItem === 'image-generation' }]" @click="handleNavClick('image-generation')">
         <div class="nav-icon">🎨</div>
         <span class="nav-text">AI绘图</span>
@@ -218,7 +223,8 @@ const setTheme = (mode: 'light'|'dark'|'auto') => themeManager.setTheme(mode as 
 const currentLanguage = computed(() => getCurrentLanguage());
 const setLang = (c: 'zh-CN'|'en-US') => switchLanguage(c);
 
-const providerList = computed(() => store.providers || []);
+const providerList = computed<Array<{ name: string; baseUrl: string }>>(() => (store.providers as any) || []);
+const providerOptions = computed(() => providerList.value.map((pp: {name:string;baseUrl:string}) => ({ label: pp.name, value: pp.name, title: pp.name })));
 const providerName = computed({ get: () => store.currentTab?.provider || '', set: (v: string) => { if (store.currentTab) store.currentTab.provider = v; }});
 const models = computed(() => store.currentTab?.models || []);
 const modelId = computed({ get: () => store.currentTab?.model || '', set: (v: string) => { if (store.currentTab) { store.currentTab.model = v; store.saveTabsToStorage?.(); } }});
@@ -241,7 +247,7 @@ try {
 } catch {}
 const persistFavs = () => { try { localStorage.setItem('favoriteProviders', JSON.stringify(favoriteProviders.value.slice(0,8))); } catch {} };
 const persistRecents = () => { try { localStorage.setItem('recentModels', JSON.stringify(recentModels.value.slice(0,8))); } catch {} };
-const quickSelectProvider = async (p: string) => { providerName.value = p; await onProviderChange(); };
+const quickSelectProvider = async (p: unknown) => { providerName.value = String(p as string); await onProviderChange(); };
 const quickSelectModel = (m: string) => { modelId.value = m; onModelChange(); };
 // 记录使用
 watch(providerName, (v) => { if (v && !favoriteProviders.value.includes(v)) { favoriteProviders.value.unshift(v); persistFavs(); } });
@@ -346,6 +352,10 @@ const handleNavClick = (navItem: string) => {
     case 'plugins':
       // 打开插件管理
       store.openPlugins();
+      break;
+    case 'knowledge':
+      // 跳转到知识库页面
+      window.location.hash = '#/knowledge';
       break;
       
     case 'image-generation':
