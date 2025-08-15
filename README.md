@@ -12,6 +12,9 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](https://github.com/hua123an/llmchat/releases)
 
+[![Latest Release](https://img.shields.io/badge/Latest%20Release-Download-blueviolet?style=for-the-badge)](https://github.com/hua123an/llmchat/releases/latest)
+[![Changelog](https://img.shields.io/badge/Changelog-查看更新说明-informational?style=for-the-badge)](CHANGELOG.md)
+
 [📥 立即下载](https://huaan666.site/update/download.html) • [📖 使用文档](#-功能特性) • [🐛 问题反馈](https://github.com/hua123an/llmchat/issues)
 
 </div>
