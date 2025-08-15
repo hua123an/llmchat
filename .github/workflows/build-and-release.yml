@@ -33,7 +33,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '18.x'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+      - name: Verify Node on PATH
+        shell: pwsh
+        run: |
+          node -v
+          npm -v
+          where.exe node
       - name: Ensure lockfile
         run: |
           if not exist package-lock.json (
