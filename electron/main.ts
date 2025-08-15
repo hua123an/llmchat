@@ -524,6 +524,20 @@ app.whenReady().then(() => {
   // 提供应用版本给渲染进程
   try {
     ipcMain.handle('get-app-version', () => app.getVersion());
+    // 检查 GitHub 最新版本
+    ipcMain.handle('check-latest-version', async () => {
+      try {
+        const resp = await fetch('https://api.github.com/repos/hua123an/llmchat/releases/latest', {
+          headers: { 'Accept': 'application/vnd.github+json', 'User-Agent': 'ChatLLM-Updater' },
+          signal: AbortSignal.timeout(6000)
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const j: any = await resp.json();
+        return { tag: String(j?.tag_name || ''), name: String(j?.name || ''), html_url: String(j?.html_url || ''), body: String(j?.body || '') };
+      } catch (e: any) {
+        return { tag: '', error: String(e?.message || e) };
+      }
+    });
   } catch {}
 
   // Updater IPC handlers

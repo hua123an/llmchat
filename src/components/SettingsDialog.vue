@@ -263,6 +263,47 @@
           </div>
         </el-tab-pane>
 
+        <!-- 语音识别 -->
+        <el-tab-pane label="语音识别" name="voice">
+          <div class="setting-section">
+            <h3 class="section-title">语音听写（STT）</h3>
+            <div class="setting-item">
+              <label class="setting-label">提供商</label>
+              <el-select v-model="sttProvider" class="setting-control" popper-class="wide-select-popper" :fit-input-width="false" @change="saveVoiceSettings">
+                <el-option label="浏览器内置（仅HTTPS/Chrome）" value="browser" />
+                <el-option label="讯飞听写（WebSocket）" value="xfyun" />
+              </el-select>
+            </div>
+            <div v-if="sttProvider==='xfyun'" class="setting-item">
+              <label class="setting-label">AppID</label>
+              <el-input v-model="xfyunAppId" class="setting-control" @change="saveVoiceSettings" placeholder="从讯飞控制台获取" />
+            </div>
+            <div v-if="sttProvider==='xfyun'" class="setting-item">
+              <label class="setting-label">API Key</label>
+              <el-input v-model="xfyunApiKey" class="setting-control" @change="saveVoiceSettings" placeholder="从讯飞控制台获取" />
+            </div>
+            <div v-if="sttProvider==='xfyun'" class="setting-item">
+              <label class="setting-label">API Secret</label>
+              <el-input v-model="xfyunApiSecret" class="setting-control" @change="saveVoiceSettings" placeholder="从讯飞控制台获取" />
+            </div>
+            <div class="setting-item">
+              <label class="setting-label">语言</label>
+              <el-select v-model="speechRecognitionLang" class="setting-control" @change="saveVoiceSettings" popper-class="wide-select-popper" :fit-input-width="false">
+                <el-option label="中文 (zh-CN)" value="zh-CN" />
+                <el-option label="英文 (en-US)" value="en-US" />
+              </el-select>
+            </div>
+            <div class="setting-item">
+              <label class="setting-label">连续识别</label>
+              <el-switch v-model="speechRecognitionContinuous" @change="saveVoiceSettings" />
+            </div>
+            <div class="setting-item">
+              <label class="setting-label">中间结果</label>
+              <el-switch v-model="speechRecognitionInterim" @change="saveVoiceSettings" />
+            </div>
+          </div>
+        </el-tab-pane>
+
       </el-tabs>
     </div>
 
@@ -283,6 +324,7 @@ import { ElMessage } from 'element-plus';
 import { themeManager } from '../utils/themeManager';
 import { supportedLocales, switchLanguage, getCurrentLanguage } from '../locales';
 import { listDocs } from '../services/rag/store';
+import { voiceService } from '../services/VoiceService';
 
 // 版本号：从构建注入或从 window 兜底
 const appVersion = (import.meta as any).env?.APP_VERSION || (typeof window !== 'undefined' ? (window as any).__APP_VERSION__ : '');
@@ -335,6 +377,15 @@ const wBing = ref<number>(3);
 const wBaidu = ref<number>(2);
 const wDuck = ref<number>(1);
 const enableKBRetrieval = ref<boolean>(false);
+
+// 语音设置
+const sttProvider = ref<'browser'|'xfyun'>('browser');
+const xfyunAppId = ref('');
+const xfyunApiKey = ref('');
+const xfyunApiSecret = ref('');
+const speechRecognitionLang = ref<'zh-CN'|'en-US'>('zh-CN');
+const speechRecognitionContinuous = ref(true);
+const speechRecognitionInterim = ref(true);
 
 // Provider 管理逻辑
 const providerList = ref<Array<{ 
@@ -389,6 +440,19 @@ const saveProviders = async () => {
     console.error('Save providers failed:', error);
     ElMessage.error(t('settings.providers.saveError', '保存失败: ') + error.message);
   }
+};
+
+// 保存语音设置
+const saveVoiceSettings = () => {
+  voiceService.saveSettings({
+    sttProvider: sttProvider.value,
+    xfyunAppId: xfyunAppId.value,
+    xfyunApiKey: xfyunApiKey.value,
+    xfyunApiSecret: xfyunApiSecret.value,
+    speechRecognitionLang: speechRecognitionLang.value,
+    speechRecognitionContinuous: speechRecognitionContinuous.value,
+    speechRecognitionInterim: speechRecognitionInterim.value,
+  });
 };
 
 // 处理API密钥输入焦点
@@ -551,8 +615,23 @@ const openDocs = () => {
 
 const checkUpdates = async () => {
   try {
+    // 本地自动检测（基于 GitHub 最新版本）
+    const latest = await (window as any).electronAPI?.checkLatestVersion?.();
+    const current = appVersionRef.value || (await (window as any).electronAPI?.getAppVersion?.());
+    const curTag = `v${(current || '').trim()}`;
+    if (latest?.tag && latest.tag !== curTag) {
+      (window as any).ElMessageBox?.confirm?.(
+        (latest?.body || '').slice(0, 2000) || `检测到新版本 ${latest.tag}，是否前往下载？`,
+        `发现新版本 ${latest.tag}`,
+        { type: 'info' }
+      )
+      .then(() => window.open(latest.html_url || 'https://github.com/hua123an/llmchat/releases/latest', '_blank'))
+      .catch(() => {});
+    } else {
+      ElMessage.success('当前已是最新版本');
+    }
+    // 仍然支持内置 autoUpdater 检查
     (window as any).electronAPI?.checkForUpdates?.();
-    ElMessage.info(t('settings.messages.checking') || '正在检查更新...');
   } catch {
     ElMessage.error(t('settings.messages.loadError'));
   }
@@ -723,6 +802,19 @@ const loadSettings = () => {
       wDuck.value = Number(sw.duck ?? 1);
       enableKBRetrieval.value = !!settings.enableKBRetrieval;
     }
+
+    // 语音设置独立存储于 voiceSettings
+    try {
+      const vsRaw = localStorage.getItem('voiceSettings');
+      const vs = vsRaw ? JSON.parse(vsRaw) : {};
+      sttProvider.value = (vs.sttProvider || 'browser');
+      xfyunAppId.value = vs.xfyunAppId || '';
+      xfyunApiKey.value = vs.xfyunApiKey || '';
+      xfyunApiSecret.value = vs.xfyunApiSecret || '';
+      speechRecognitionLang.value = (vs.speechRecognitionLang || 'zh-CN');
+      speechRecognitionContinuous.value = (vs.speechRecognitionContinuous ?? true);
+      speechRecognitionInterim.value = (vs.speechRecognitionInterim ?? true);
+    } catch {}
   } catch (error) {
     console.error(t('settings.messages.loadError'), error);
   }

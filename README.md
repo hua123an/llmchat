@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![ChatLLM Logo](https://img.shields.io/badge/ChatLLM-v2.0.1-blue?style=for-the-badge&logo=electron)
+![ChatLLM Logo](https://img.shields.io/badge/ChatLLM-v2.0.2-blue?style=for-the-badge&logo=electron)
 
 **🤖 一个强大的多模型AI聊天应用**
 

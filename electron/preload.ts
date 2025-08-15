@@ -68,6 +68,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   generateImage: (request: any, providerName: string, apiKey: string) => ipcRenderer.invoke('generate-image', request, providerName, apiKey),
   toggleDevtools: () => ipcRenderer.invoke('devtools-toggle'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  checkLatestVersion: () => ipcRenderer.invoke('check-latest-version'),
   checkSearchAPIStatus: () => ipcRenderer.invoke('check-search-api-status'),
   
   // Provider 管理 API

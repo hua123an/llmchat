@@ -1,7 +1,7 @@
 {
   "name": "chatllm",
   "productName": "ChatLLM",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "一个强大的多模型AI聊天应用，支持知识库、联网搜索等功能",
   "author": {
     "name": "ChatLLM Team",
@@ -194,8 +194,9 @@
     },
     "publish": [
       {
-        "provider": "generic",
-        "url": "https://your-update-server.example.com/updates/"
+        "provider": "github",
+        "owner": "hua123an",
+        "repo": "llmchat"
       }
     ]
   }
