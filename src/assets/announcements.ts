@@ -11,6 +11,46 @@ export interface ReleaseNote {
 
 export const releaseNotes: ReleaseNote[] = [
   {
+    "version": "2.0.3",
+    "date": "2025-08-15",
+    "items": [
+      {
+        "type": "新增",
+        "points": [
+          "知识库增强版（基础页）：",
+          "文本/文件（PDF、DOCX、TXT）/URL 导入",
+          "文档列表、单文档删除、全部清空",
+          "本地检索（BM25），结果预览",
+          "侧栏新增“知识库”入口，新增 #/knowledge 路由",
+          "Web Worker 解析，导入不阻塞 UI",
+          "切块参数化（chunkSize/overlap/去噪）、高亮与引用回填",
+          "本地/远程嵌入向量检索、MMR 排序"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "2.0.2",
+    "date": "2025-08-15",
+    "items": [
+      {
+        "type": "改进",
+        "points": [
+          "GitHub Actions 发布流程：基于 tag 自动构建并上传 Windows 产物",
+          "启用 Dependabot：每周检查 npm 与 Actions 依赖",
+          "README：新增 CI/Release 与 Discussions 徽章"
+        ]
+      },
+      {
+        "type": "修复",
+        "points": [
+          "语音识别设置：新增讯飞 WebSocket 听写配置入口",
+          "版本与下载链接：统一指向 v2.0.2"
+        ]
+      }
+    ]
+  },
+  {
     "version": "2.0.1",
     "date": "2025-08-15",
     "items": [
@@ -40,7 +80,7 @@ export const releaseNotes: ReleaseNote[] = [
   },
   {
     "version": "1.1.0",
-    "date": "2024-12-28",
+    "date": "2025-08-10",
     "items": [
       {
         "type": "新增",
@@ -82,7 +122,7 @@ export const releaseNotes: ReleaseNote[] = [
   },
   {
     "version": "1.0.0",
-    "date": "2024-12-27",
+    "date": "2025-08-05",
     "items": []
   }
 ];

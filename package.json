@@ -1,7 +1,7 @@
 {
   "name": "chatllm",
   "productName": "ChatLLM",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "一个强大的多模型AI聊天应用，支持知识库、联网搜索等功能",
   "author": {
     "name": "ChatLLM Team",
@@ -49,16 +49,16 @@
     "lint:check": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts"
   },
   "dependencies": {
-    "ssh2-sftp-client": "^10.0.3",
     "@tanstack/vue-query": "^5.83.1",
     "axios": "^1.11.0",
     "electron-store": "^10.1.0",
-    "element-plus": "^2.10.5",
     "electron-updater": "^6.3.4",
+    "element-plus": "^2.10.5",
     "mammoth": "^1.7.1",
     "openai": "^4.104.0",
     "pdfjs-dist": "^4.6.82",
     "pinia": "^3.0.3",
+    "ssh2-sftp-client": "^10.0.3",
     "tesseract.js": "^5.1.0",
     "tiktoken": "^1.0.21",
     "unplugin-auto-import": "^20.0.0",
@@ -68,8 +68,8 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
-    "cross-env": "^7.0.3",
     "@vitejs/plugin-vue": "^5.0.4",
+    "cross-env": "^7.0.3",
     "electron": "^30.0.1",
     "electron-builder": "^24.13.3",
     "png-to-ico": "^2.1.8",
