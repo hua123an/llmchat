@@ -62,6 +62,8 @@ jobs:
           name: build-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
             dist-build/*.exe
+            dist-build/*.yml
+            dist-build/*.blockmap
             dist-build/*.dmg
             dist-build/*.zip
             dist-build/*.AppImage
@@ -137,6 +139,28 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: dist-build/ChatLLM-*x64-portable.exe
           asset_name: ChatLLM-${{ steps.version.outputs.VERSION }}-Windows-x64-Portable.exe
+          asset_content_type: application/octet-stream
+        continue-on-error: true
+
+      - name: Upload latest.yml
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dist-build/latest.yml
+          asset_name: latest.yml
+          asset_content_type: text/yaml
+        continue-on-error: true
+
+      - name: Upload blockmap
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dist-build/*.blockmap
+          asset_name: ChatLLM-${{ steps.version.outputs.VERSION }}-Windows-x64.exe.blockmap
           asset_content_type: application/octet-stream
         continue-on-error: true
 
