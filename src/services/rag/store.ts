@@ -87,4 +87,35 @@ export async function clearAll(): Promise<void> {
   await new Promise((res, rej) => { tx.oncomplete = () => res(null); tx.onerror = () => rej(tx.error); });
 }
 
+export async function deleteDoc(docId: string): Promise<void> {
+  const db = await openDB();
+  // 删除 meta
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(['docs'], 'readwrite');
+    tx.objectStore('docs').delete(docId);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  // 删除 chunks（按索引扫描再按主键删除）
+  const chunkIds: string[] = await new Promise((resolve) => {
+    const tx = db.transaction(['chunks']);
+    const idx = tx.objectStore('chunks').index('docId').getAll(docId);
+    idx.onsuccess = () => {
+      const list = (idx.result as any[]) || [];
+      resolve(list.map((c: any) => c.id));
+    };
+    idx.onerror = () => resolve([]);
+  });
+  for (let i = 0; i < chunkIds.length; i += 200) {
+    const slice = chunkIds.slice(i, i + 200);
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(['chunks'], 'readwrite');
+      const store = tx.objectStore('chunks');
+      for (const id of slice) store.delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+}
+
 

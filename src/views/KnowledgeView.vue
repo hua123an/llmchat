@@ -14,6 +14,15 @@
     <div class="toolbar">
       <el-input v-model="query" placeholder="搜索文档内容" clearable @keyup.enter="handleSearch" />
       <el-button @click="handleSearch">搜索</el-button>
+      <el-upload
+        :show-file-list="false"
+        accept=".pdf,.docx,.txt"
+        :on-change="onFileSelect"
+        :auto-upload="false"
+      >
+        <el-button>导入文件</el-button>
+      </el-upload>
+      <el-input v-model="urlToImport" placeholder="输入URL并回车导入" @keyup.enter="importFromUrl" style="max-width:360px" />
     </div>
     <el-table :data="docs" height="420" style="width: 100%">
       <el-table-column prop="name" label="名称" width="240" />
@@ -21,10 +30,15 @@
       <el-table-column prop="createdAt" label="时间" width="200">
         <template #default="{ row }">{{ new Date(row.createdAt).toLocaleString() }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="240">
+      <el-table-column label="操作" width="320">
         <template #default="{ row }">
           <el-button size="small" @click="preview(row)">预览</el-button>
           <el-button size="small" type="primary" @click="searchDoc(row)">在此搜索</el-button>
+          <el-popconfirm title="删除该文档？" @confirm="() => removeDoc(row.id)">
+            <template #reference>
+              <el-button size="small" type="danger" plain>删除</el-button>
+            </template>
+          </el-popconfirm>
         </template>
       </el-table-column>
     </el-table>
@@ -54,6 +68,9 @@
 import { ref, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import { listAllDocs, importText, searchInDoc, clearKnowledgeBase } from '../services/rag';
+import { deleteDoc } from '../services/rag/store';
+import { extractPdfText } from '../services/extractors/pdf';
+import { extractDocxText } from '../services/extractors/docx';
 
 const docs = ref<Array<{ id:string; name:string; size:number; createdAt:number }>>([]);
 const query = ref('');
@@ -63,6 +80,7 @@ const importTextValue = ref('');
 const resultVisible = ref(false);
 const results = ref<any[]>([]);
 let lastDocId: string | null = null;
+const urlToImport = ref('');
 
 const refresh = async () => { docs.value = await listAllDocs(); };
 const openImport = () => { importVisible.value = true; };
@@ -86,6 +104,53 @@ const handleSearch = async () => {
 const searchDoc = async (row:any) => { lastDocId=row.id; await handleSearch(); };
 const preview = async (row:any) => { lastDocId=row.id; query.value=''; results.value=[]; resultVisible.value=true; };
 const handleClear = async () => { await clearKnowledgeBase(); await refresh(); ElMessage.success('已清空'); };
+const removeDoc = async (id:string) => { await deleteDoc(id); await refresh(); ElMessage.success('已删除'); };
+
+const onFileSelect = async (file:any) => {
+  try {
+    const raw = file?.raw as File;
+    if (!raw) return;
+    const buf = await raw.arrayBuffer();
+    let text = '';
+    if (/\.pdf$/i.test(raw.name)) text = await extractPdfText(buf);
+    else if (/\.docx$/i.test(raw.name)) text = await extractDocxText(buf);
+    else if (/\.txt$/i.test(raw.name)) text = new TextDecoder().decode(buf);
+    else { ElMessage.error('不支持的文件类型'); return; }
+    await importText(raw.name.replace(/\.(pdf|docx|txt)$/i,''), text);
+    await refresh();
+    ElMessage.success('文件已导入');
+  } catch (e:any) {
+    ElMessage.error('导入失败: '+(e?.message||''));
+  }
+};
+
+const importFromUrl = async () => {
+  const u = urlToImport.value.trim(); if (!u) return;
+  try {
+    const res = await fetch(u);
+    const ct = res.headers.get('content-type') || '';
+    if (/pdf/i.test(ct)) {
+      const buf = await res.arrayBuffer();
+      const text = await extractPdfText(buf, 50);
+      await importText(u, text);
+    } else if (/officedocument\.wordprocessingml\.document|docx/i.test(ct)) {
+      const buf = await res.arrayBuffer();
+      const text = await extractDocxText(buf);
+      await importText(u, text);
+    } else if (/text\//i.test(ct)) {
+      const text = await res.text();
+      await importText(u, text);
+    } else {
+      const text = await res.text();
+      await importText(u, text);
+    }
+    urlToImport.value = '';
+    await refresh();
+    ElMessage.success('URL 已导入');
+  } catch (e:any) {
+    ElMessage.error('URL 导入失败: '+(e?.message||''));
+  }
+};
 
 onMounted(refresh);
 </script>
