@@ -86,7 +86,7 @@ const refresh = async () => { docs.value = await listAllDocs(); };
 const openImport = () => { importVisible.value = true; };
 const doImport = async () => {
   try {
-    const m = await importText(importName.value || '新文档', importTextValue.value || '');
+    await importText(importName.value || '新文档', importTextValue.value || '');
     importVisible.value = false; importName.value=''; importTextValue.value='';
     ElMessage.success('导入成功');
     await refresh();
