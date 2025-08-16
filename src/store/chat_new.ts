@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import * as ipc from '../modules/system/ipc';
 import { ref, computed } from 'vue';
 import { createError, handleError } from '../utils/errorHandler';
 
@@ -127,7 +128,7 @@ export const useChatStore = defineStore('chat', () => {
   // Actions
   const loadInitialData = async () => {
     try {
-      providers.value = await window.electronAPI.getProviders();
+      providers.value = await ipc.getProviders();
     } catch (error) {
       handleError(
         createError.api('Failed to load providers', 'loadInitialData', '加载服务商列表失败'),
@@ -241,7 +242,7 @@ export const useChatStore = defineStore('chat', () => {
     if (!provider) return;
 
     try {
-      const models = await window.electronAPI.getModels(provider.name);
+      const models = await ipc.getModels(provider.name);
       provider.models = models;
     } catch (error) {
       handleError(
@@ -291,7 +292,7 @@ export const useChatStore = defineStore('chat', () => {
     saveTabsToStorage();
 
     try {
-      await window.electronAPI.sendMessage(currentTab.value.provider, currentTab.value.model, messagesToSend, userMessage.id, assistantMessage.id, undefined, false, { search_context_size: 'medium' });
+      await ipc.sendMessage(currentTab.value.provider, currentTab.value.model, messagesToSend, userMessage.id, assistantMessage.id, undefined, false, { search_context_size: 'medium' });
     } catch (error) {
       handleError(
         createError.api('Failed to send message', 'sendMessage', '发送消息失败'),

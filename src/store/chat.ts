@@ -566,7 +566,7 @@ export const useChatStore = defineStore('chat', () => {
 
     // 监听自动更新事件（强制更新遮罩层）
     try {
-      (window as any).electronAPI?.onAutoUpdate?.((_e: any, payload: any) => {
+      ipc.updaterOn((_e: any, payload: any) => {
         if (!payload || !payload.type) return;
         switch (payload.type) {
           case 'checking':

@@ -348,7 +348,7 @@ export class ImageGenerationService {
     }
 
     // 检查是否在Electron环境中
-    if (typeof window !== 'undefined' && (window as any).electronAPI) {
+    if (typeof window !== 'undefined') {
       try {
         console.log('通过Electron主进程调用阿里云API');
         
@@ -362,7 +362,8 @@ export class ImageGenerationService {
           guidance_scale: request.guidance_scale ? Number(request.guidance_scale) : undefined
         };
         
-        const result = await (window as any).electronAPI.generateImage(cleanRequest, 'aliyun', apiKey);
+        const { generateImage } = await import('../modules/system/ipc');
+        const result = await generateImage(cleanRequest, 'aliyun', apiKey);
         
         if (!result.success) {
           throw new Error(result.error || '图像生成失败');
