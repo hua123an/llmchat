@@ -516,16 +516,5 @@ export default {
   },
 
   // A/B测试
-  abTest: {
-    title: 'A/B测试',
-    provider: '服务商',
-    model: '模型',
-    prompt: '提示词',
-    runTest: '运行测试',
-    results: '测试结果',
-    comparison: '对比结果',
-    winner: '优胜者',
-    tie: '平局',
-    noWinner: '无优胜者'
-  }
+  // 已移除A/B测试功能
 };

@@ -512,16 +512,5 @@ export default {
   },
 
   // A/B Testing
-  abTest: {
-    title: 'A/B Testing',
-    provider: 'Provider',
-    model: 'Model',
-    prompt: 'Prompt',
-    runTest: 'Run Test',
-    results: 'Test Results',
-    comparison: 'Comparison Results',
-    winner: 'Winner',
-    tie: 'Tie',
-    noWinner: 'No Winner'
-  }
+  // A/B testing removed
 };
