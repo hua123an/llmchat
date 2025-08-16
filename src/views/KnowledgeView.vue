@@ -9,6 +9,7 @@
             <el-button type="danger" plain>清空</el-button>
           </template>
         </el-popconfirm>
+        <el-button @click="openIndexDialog">向量索引</el-button>
       </div>
     </div>
     <div class="toolbar">

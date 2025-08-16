@@ -840,6 +840,27 @@ ${curated}
       // 清空附件（发送时浮层马上消失）
       currentTab.value!.attachments = [];
       
+      // 可选：知识库 Top-k 引用
+      try {
+        const raw = localStorage.getItem('appSettings');
+        const cfg = raw ? JSON.parse(raw) : {};
+        if (cfg.enableKBRetrieval) {
+          const { listAllDocs, getDocChunks, vectorSearch } = await import('../services/rag');
+          const docs = await listAllDocs();
+          if (docs.length > 0) {
+            const firstDoc = docs[0];
+            // 使用阿里云生成查询向量
+            const vecs: number[][] = await (window as any).electronAPI.embedTexts('aliyun', [userMessage.content || ''], { model: 'text-embedding-v1' });
+            const qv = (vecs && vecs[0]) || [];
+            const top = await vectorSearch(firstDoc.id, qv, 4);
+            if (top && top.length > 0) {
+              const refs = top.map((x, i) => `［R${i+1}］${x.chunk.text}`).join('\n');
+              (payload.messagesToSend as any).unshift({ role: 'system', content: `你可以使用以下知识库参考回答用户问题：\n${refs}\n请在答案中合理引用这些内容。` });
+            }
+          }
+        }
+      } catch {}
+
       await window.electronAPI.sendMessage(
         currentProvider, 
         currentModel, 
