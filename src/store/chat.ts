@@ -4,6 +4,7 @@ import { createError, handleError } from '../utils/errorHandler';
 // import removed: cost estimation no longer used
 import { t } from '../locales';
 import { searchAndFetch } from '../services/search/web';
+import * as ipc from '../modules/system/ipc';
 
 // 基础数据接口
 export interface Message {
@@ -354,7 +355,7 @@ export const useChatStore = defineStore('chat', () => {
   // 单独的providers加载函数
   const loadProviders = async () => {
     try {
-      const providersData = await window.electronAPI.getProviders();
+      const providersData = await ipc.getProviders();
       
       if (Array.isArray(providersData) && providersData.length > 0) {
         providers.value = [...providersData]; // 使用展开运算符确保响应式更新
@@ -463,7 +464,7 @@ export const useChatStore = defineStore('chat', () => {
     loadCurrencySettingsFromStorage();
 
     // Listen for message usage updates
-    window.electronAPI.onMessageUsage((_event, usageData) => {
+    ipc.onMessageUsage((_event: any, usageData: any) => {
       if (currentTab.value) {
         const message = currentTab.value.messages.find(m => m.id === usageData.messageId);
         if (message) {
@@ -504,7 +505,7 @@ export const useChatStore = defineStore('chat', () => {
 
     // Listen for streaming message updates
     const lastStreamDeltaByMessage = new Map<string, string>();
-    window.electronAPI.onMessage((_event, data) => {
+    ipc.onMessage((_event: any, data: any) => {
       if (!currentTab.value) return;
       
       const assistantMessage = currentTab.value.messages.find(m => m.id === data.messageId);
@@ -552,7 +553,7 @@ export const useChatStore = defineStore('chat', () => {
     });
 
     // Listen for search annotations (OpenRouter web search results)
-    window.electronAPI.onMessageAnnotations((_event, data) => {
+    ipc.onMessageAnnotations((_event: any, data: any) => {
       if (!currentTab.value) return;
       
       const assistantMessage = currentTab.value.messages.find(m => m.id === data.messageId);
@@ -664,10 +665,10 @@ export const useChatStore = defineStore('chat', () => {
     currentTab.value.model = '';
 
     try {
-      const models = await window.electronAPI.getModels(provider.name);
+      const models = await ipc.getModels(provider.name);
       // 如果没有拿到，尝试测试端点以方便提示
       if ((!models || models.length === 0)) {
-        const probe = await window.electronAPI.testProvider(provider.name);
+        const probe = await ipc.testProvider(provider.name);
         if (!probe?.ok) {
           (window as any).ElMessage?.error?.(`模型列表获取失败：${probe?.message || 'Unknown'}`);
         }
@@ -852,7 +853,7 @@ ${curated}
           const chosenIds: string[] = Array.isArray(cfg.kbDocIds) && cfg.kbDocIds.length ? cfg.kbDocIds : (docs[0] ? [docs[0].id] : []);
           if (chosenIds.length > 0) {
             // 使用阿里云生成查询向量
-            const vecs: number[][] = await (window as any).electronAPI.embedTexts('aliyun', [userMessage.content || ''], { model: 'text-embedding-v1' });
+            const vecs: number[][] = await ipc.embedTexts('aliyun', [userMessage.content || ''], { model: 'text-embedding-v1' });
             const qv = (vecs && vecs[0]) || [];
             const topK = Math.max(1, Math.min(10, Number(cfg.kbTopK || 4)));
 
@@ -875,7 +876,7 @@ ${curated}
         }
       } catch {}
 
-      await window.electronAPI.sendMessage(
+      await ipc.sendMessage(
         currentProvider, 
         currentModel, 
         payload.messagesToSend, 

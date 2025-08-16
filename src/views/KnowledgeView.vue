@@ -202,7 +202,8 @@ const buildIndex = async () => {
     if (!chunks.length) { ElMessage.warning('该文档暂无分块'); indexing.value=false; return; }
     indexProgress.value = `嵌入 ${chunks.length} 段...`;
     const texts = chunks.map(c => c.text);
-    const vectors: number[][] = await (window as any).electronAPI.embedTexts('aliyun', texts, { model: 'text-embedding-v1' });
+    const { embedTexts } = await import('../modules/system/ipc');
+    const vectors: number[][] = await embedTexts('aliyun', texts, { model: 'text-embedding-v1' });
     await saveVectors(docId, chunks, vectors.map((v, i) => ({ id: chunks[i].id, vector: v })) as any);
     ElMessage.success('索引已生成');
   } catch (e:any) {
@@ -212,7 +213,8 @@ const buildIndex = async () => {
 const searchByVector = async () => {
   const q = queryText.value.trim(); const docId = selectedDocId.value; if (!q || !docId) return;
   try {
-    const vectors: number[][] = await (window as any).electronAPI.embedTexts('aliyun', [q], { model: 'text-embedding-v1' });
+    const { embedTexts } = await import('../modules/system/ipc');
+    const vectors: number[][] = await embedTexts('aliyun', [q], { model: 'text-embedding-v1' });
     const vec = (vectors && vectors[0]) || [];
     const res = await vectorSearch(docId, vec, 8);
     results.value = res; resultVisible.value = true;
