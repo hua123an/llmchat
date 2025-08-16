@@ -102,19 +102,24 @@
                     </div>
                   </div>
                   <div v-if="Array.isArray(message.kbRefs) && message.kbRefs.length" class="citations">
-                    <div class="cite-header">
+                    <div class="cite-header" style="display:flex; align-items:center; justify-content: space-between;">
                       <span class="cite-icon">📚</span>
                       <span class="cite-title">知识库参考</span>
+                      <button class="preview-btn" @click.prevent="copyAllKBRefs(message.kbRefs)">复制全部</button>
                     </div>
                     <div class="cite-list">
                       <div v-for="r in message.kbRefs" :key="r.index" class="cite-item">
                         <div class="cite-index">{{ r.index }}</div>
                         <div class="cite-content">
-                          <div class="cite-text" :title="r.text">{{ r.text }}</div>
+                          <div class="cite-text" :title="r.text">
+                            <template v-if="isExpanded(`${message.id}-${r.index}`)">{{ r.text }}</template>
+                            <template v-else>{{ r.text.slice(0, 200) }}<span v-if="r.text.length>200">...</span></template>
+                          </div>
                           <div style="margin-top:4px; display:flex; gap:6px">
                             <button class="preview-btn" @click.prevent="copyKBRef(r.text)">复制</button>
                             <button class="preview-btn" @click.prevent="addRefToInput(r.text)">添加到提示</button>
                             <button class="preview-btn" @click.prevent="locateKBRef(r)">定位</button>
+                            <button class="preview-btn" @click.prevent="toggleExpand(`${message.id}-${r.index}`)">{{ isExpanded(`${message.id}-${r.index}`) ? '收起' : '展开' }}</button>
                           </div>
                         </div>
                       </div>
@@ -270,6 +275,17 @@ const locateKBRef = (r: any) => {
   } catch {}
   // 简单跳转到知识库页，实际定位由知识库页后续读取 kbLocate 实现
   try { window.location.hash = '#/knowledge'; } catch {}
+};
+
+// 展开/收起与复制全部
+const expandedSet = ref<Set<string>>(new Set());
+const toggleExpand = (key: string) => {
+  if (expandedSet.value.has(key)) expandedSet.value.delete(key); else expandedSet.value.add(key);
+};
+const isExpanded = (key: string) => expandedSet.value.has(key);
+const copyAllKBRefs = async (refs: Array<{text:string}>) => {
+  const text = (refs || []).map((r, i) => `［R${i+1}］${r.text}`).join('\n');
+  await copyKBRef(text);
 };
 
 // TanStack Mutation 状态
