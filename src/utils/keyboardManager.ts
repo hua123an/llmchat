@@ -173,6 +173,20 @@ export class KeyboardManager {
    * 注册默认快捷键
    */
   private registerDefaultShortcuts(): void {
+    // 打开/关闭 知识库悬浮窗 Ctrl+K
+    this.registerShortcut({
+      key: 'k',
+      ctrlKey: true,
+      description: '打开/关闭知识库',
+      action: () => {
+        const store = (window as any).__CHAT_STORE__;
+        if (store && typeof store.toggleKnowledge === 'function') {
+          store.toggleKnowledge();
+        } else if (store) {
+          store.isKnowledgeOpen = !store.isKnowledgeOpen;
+        }
+      }
+    });
     // 新建聊天
     this.registerShortcut({
       key: 'n',
