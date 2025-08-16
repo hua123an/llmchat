@@ -7,7 +7,9 @@ export interface ImageGenerationRequest {
   prompt: string;
   model?: 'dall-e-3' | 'dall-e-2' | 'stable-diffusion' | 'midjourney-style' | 
           'stable-diffusion-3.5-large' | 'stable-diffusion-3.5-large-turbo' | 
-          'flux-schnell' | 'flux-dev';
+          'flux-schnell' | 'flux-dev' |
+          // Google Gemini image models
+          'gemini-1.5-pro' | 'gemini-1.5-flash' | 'gemini-2.0-flash' | 'imagen-3';
   size?: '256x256' | '512x512' | '1024x1024' | '1792x1024' | '1024x1792';
   quality?: 'standard' | 'hd';
   style?: 'vivid' | 'natural';
@@ -89,6 +91,24 @@ export class ImageGenerationService {
           '1024x1024': 0.05,
           '1792x1024': 0.075,
           '1024x1792': 0.075
+        }
+      }
+    },
+    // Google Gemini/Imagen
+    {
+      name: 'gemini',
+      displayName: 'Google Gemini',
+      description: 'Google Generative AI（Gemini/Imagen）',
+      baseUrl: 'https://generativelanguage.googleapis.com',
+      supportedSizes: ['512x512', '1024x1024', '1792x1024', '1024x1792'],
+      supportedModels: ['imagen-3', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.0-flash'],
+      maxImages: 4,
+      pricing: {
+        'imagen-3': {
+          '512x512': 0.02,
+          '1024x1024': 0.04,
+          '1792x1024': 0.06,
+          '1024x1792': 0.06
         }
       }
     },
@@ -189,6 +209,8 @@ export class ImageGenerationService {
       switch (provider) {
         case 'openai':
           return await this.generateWithOpenAI(request, settings.openaiApiKey);
+        case 'gemini':
+          return await this.generateWithGemini(request, (settings as any).geminiApiKey || '');
         case 'stability':
           return await this.generateWithStability(request, settings.stabilityApiKey);
         case 'midjourney':
@@ -393,6 +415,31 @@ export class ImageGenerationService {
     } else {
       throw new Error('阿里云图像生成需要在Electron环境中运行，以避免跨域限制。请在桌面版中使用此功能。');
     }
+  }
+
+  /**
+   * Google Gemini/Imagen 图像生成（通过Electron主进程，自动处理CORS与鉴权）
+   */
+  private static async generateWithGemini(request: ImageGenerationRequest, apiKey: string): Promise<ImageGenerationResponse> {
+    if (typeof window === 'undefined') {
+      throw new Error('需要在桌面端运行');
+    }
+    const cleanRequest = {
+      prompt: String(request.prompt || ''),
+      model: String(request.model || 'imagen-3'),
+      size: String(request.size || '1024x1024'),
+      n: Number(request.n || 1)
+    } as any;
+    const { generateImage } = await import('../modules/system/ipc');
+    // 主进程将优先使用传入 key；如为空则回退使用 secureStorage 中的 gemini 提供商密钥
+    const result = await generateImage(cleanRequest, 'gemini', apiKey || '');
+    if (!result?.success) throw new Error(result?.error || '图像生成失败');
+    const images = Array.isArray(result.images) ? result.images.map((img: any) => ({
+      url: String(img.url || ''),
+      revised_prompt: cleanRequest.prompt,
+      b64_json: img.b64_json
+    })) : [];
+    return { success: true, images, usage: { provider: 'Google Gemini', cost: this.calculateCost('gemini', request) } };
   }
 
   /*

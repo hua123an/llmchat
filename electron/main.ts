@@ -828,7 +828,29 @@ ipcMain.handle('get-models', async (_event: IpcMainInvokeEvent, providerName: st
   }
 
 
-  
+  // Google Gemini 专用处理：使用官方 Generative Language API（需要 key query 参数）
+  if (provider && (/generativelanguage\.googleapis\.com/i.test(provider.baseUrl) || /\b(gemini|google)\b/i.test(provider.name))) {
+    try {
+      const base = 'https://generativelanguage.googleapis.com';
+      const url = `${base}/v1beta/models?key=${encodeURIComponent(apiKey || '')}`;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 12000);
+      const resp = await fetch(url, { method: 'GET', signal: controller.signal, headers: { Accept: 'application/json' } }).finally(() => clearTimeout(timer));
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+      const json: any = await resp.json();
+      const arr: any[] = Array.isArray(json.models) ? json.models : [];
+      const models = arr.map((m: any) => {
+        const name: string = m?.name || '';
+        const id = name.includes('/') ? name.split('/').pop() : (m?.displayName || name || '');
+        return id ? { id } : null;
+      }).filter(Boolean) as Array<{ id: string }>;
+      return models;
+    } catch (e: any) {
+      console.warn('Gemini list models failed:', e?.message || e);
+      return [];
+    }
+  }
+
   const base = provider.baseUrl.replace(/\/$/, '');
   
   // 302AI 特殊处理：使用官方文档指定的端点和参数
@@ -1063,6 +1085,14 @@ ipcMain.handle('generate-image', async (_event: IpcMainInvokeEvent, request: any
         } : undefined,
         error: (result as any).error || undefined
       };
+    } else if (providerName === 'gemini') {
+      const result = await handleGeminiImageGeneration(request, apiKey);
+      return {
+        success: result.success,
+        images: result.images || [],
+        usage: result.usage ? { provider: result.usage.provider, cost: result.usage.cost || 0 } : undefined,
+        error: (result as any).error || undefined
+      };
     } else {
       throw new Error(`不支持的图像生成服务商: ${providerName}`);
     }
@@ -1247,6 +1277,55 @@ async function handleAliyunImageGeneration(request: any, apiKey: string) {
   throw new Error('阿里云兼容API响应格式不正确');
 }
 
+// Google Gemini / Imagen 图像生成
+async function handleGeminiImageGeneration(request: any, apiKey: string) {
+  const key = String(apiKey || '').trim();
+  const providers = (store.get('providers') as { name: string; baseUrl: string }[]) || [];
+  const gem = providers.find(p => /generativelanguage\.googleapis\.com/i.test(p.baseUrl) || /\b(gemini|google)\b/i.test(p.name));
+  const realKey = key || (gem ? secureStorage.getApiKey(gem.name) : '');
+  if (!realKey) throw new Error('Gemini API Key 未配置');
+  const base = 'https://generativelanguage.googleapis.com';
+  const model = String(request.model || 'imagen-3');
+  const size = String(request.size || '1024x1024');
+  const [w, h] = size.split('x').map((x: string) => parseInt(x, 10));
+  const prompt = String(request.prompt || '');
+
+  // Imagen 3 text-to-image
+  const url = `${base}/v1beta/models/${encodeURIComponent(model)}:generateImages?key=${encodeURIComponent(realKey)}`;
+  const body: any = {
+    prompt: { text: prompt },
+    // 目标尺寸（部分模型仅支持正方形，非正方形将退化为1024x1024）
+    // 交由服务端裁剪/缩放
+    aspectRatio: (w && h && w !== h) ? (w > h ? 'WIDE' : 'TALL') : 'SQUARE',
+    // 请求多张
+    numberOfImages: Math.min(Number(request.n || 1), 4)
+  };
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if ((resp.status === 429 || resp.status === 503)) {
+    // 简单退避一次
+    await new Promise(r => setTimeout(r, 600));
+  }
+  if (!resp.ok) {
+    const err = await resp.text().catch(() => '');
+    throw new Error(`Gemini image HTTP ${resp.status}${err ? `: ${err.slice(0,160)}` : ''}`);
+  }
+  const json: any = await resp.json().catch(() => ({}));
+  const arr = Array.isArray(json?.images) ? json.images : [];
+  const images = arr.map((it: any) => {
+    // Imagen 3 返回 base64 或媒体URL（不同区域版本略有差异）
+    const b64 = it?.base64Data || it?.b64_json;
+    const mediaUrl = it?.imageUrl || it?.url;
+    if (typeof mediaUrl === 'string' && mediaUrl) return { url: mediaUrl, revised_prompt: prompt };
+    if (typeof b64 === 'string' && b64) return { b64_json: b64, url: `data:image/png;base64,${b64}`, revised_prompt: prompt };
+    return { url: '', revised_prompt: prompt };
+  });
+  return { success: true, images, usage: { provider: 'Google Gemini/Imagen', cost: 0 } };
+}
+
 ipcMain.handle('send-message', async (_event: IpcMainInvokeEvent, providerName: string, model: string, messages: any[], _userMessageId: string, assistantMessageId: string, attachments?: Array<{ name: string; mime: string; size: number; dataUrl?: string; textSnippet?: string; fullText?: string }>, webSearchEnabled?: boolean, webSearchOptions?: WebSearchOptions) => {
   const providers = store.get('providers') as { name: string; baseUrl: string }[] || [];
   const provider = providers.find(p => p.name === providerName);
@@ -1355,6 +1434,129 @@ ipcMain.handle('send-message', async (_event: IpcMainInvokeEvent, providerName: 
       console.log('检测到阿里云百炼，使用OpenAI兼容模式:', baseURL);
     }
     
+    // Google Gemini 专用：使用官方 Generative Language API（避免 429/兼容问题）
+    if (/generativelanguage\.googleapis\.com/i.test(baseURL) || /\b(gemini|google)\b/i.test((provider?.name || ''))) {
+      const toGeminiParts = async (content: any): Promise<any[]> => {
+        const parts: any[] = [];
+        if (typeof content === 'string') {
+          if (content.trim()) parts.push({ text: content });
+          return parts;
+        }
+        if (Array.isArray(content)) {
+          for (const p of content) {
+            if (p?.type === 'text' && p.text) {
+              parts.push({ text: String(p.text) });
+            } else if (p?.type === 'image_url' && p.image_url?.url) {
+              const url: string = String(p.image_url.url);
+              if (url.startsWith('data:')) {
+                const m = url.match(/^data:([^;]+);base64,(.*)$/);
+                if (m) {
+                  parts.push({ inlineData: { mimeType: m[1], data: m[2] } });
+                }
+              } else {
+                try {
+                  const controller = new AbortController();
+                  const timer = setTimeout(() => controller.abort(), 8000);
+                  const res = await fetch(url, { signal: controller.signal });
+                  clearTimeout(timer);
+                  const mime = res.headers.get('content-type') || 'image/png';
+                  const buf = await res.arrayBuffer();
+                  const b64 = Buffer.from(buf).toString('base64');
+                  parts.push({ inlineData: { mimeType: mime, data: b64 } });
+                } catch {
+                  parts.push({ text: `[image] ${url}` });
+                }
+              }
+            }
+          }
+        }
+        return parts;
+      };
+
+      // 提取 system 指令
+      let systemInstruction: string | undefined;
+      const nonSystemMessages: any[] = [];
+      for (const m of finalMessages) {
+        if (m.role === 'system' && typeof m.content === 'string') systemInstruction = String(m.content || '');
+        else nonSystemMessages.push(m);
+      }
+
+      const contents: any[] = [];
+      for (const m of nonSystemMessages) {
+        const role = m.role === 'assistant' ? 'model' : 'user';
+        const parts = await toGeminiParts(m.content);
+        if (parts.length > 0) contents.push({ role, parts });
+      }
+
+      const genCfg = { temperature: 0.7, topP: 0.95, maxOutputTokens: 2048 } as any;
+
+      const base = 'https://generativelanguage.googleapis.com';
+      const endpoint = `${base}/v1beta/models/${encodeURIComponent(finalModel)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(apiKey)}`;
+
+      // 指数退避请求封装（应对 429）
+      const fetchWithBackoff = async (attempt = 0): Promise<Response> => {
+        const body: any = { contents, generationConfig: genCfg };
+        if (systemInstruction) body.systemInstruction = { role: 'system', parts: [{ text: systemInstruction }] };
+        const resp = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+          body: JSON.stringify(body)
+        });
+        if ((resp.status === 429 || resp.status === 503) && attempt < 3) {
+          const delay = Math.floor(400 * Math.pow(2, attempt) + Math.random() * 120);
+          await new Promise(r => setTimeout(r, delay));
+          return fetchWithBackoff(attempt + 1);
+        }
+        return resp;
+      };
+
+      const resp = await fetchWithBackoff(0);
+      if (!resp.ok || !resp.body) {
+        const text = await resp.text().catch(() => '');
+        throw new Error(`Gemini HTTP ${resp.status}${text ? `: ${text.slice(0, 160)}` : ''}`);
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          const dataStr = trimmed.slice(5).trim();
+          if (dataStr === '[DONE]' || dataStr === '') continue;
+          try {
+            const obj = JSON.parse(dataStr);
+            // 规范化文本增量
+            const cands = obj?.candidates || [];
+            for (const c of cands) {
+              const partsArr = c?.content?.parts || [];
+              for (const p of partsArr) {
+                if (typeof p?.text === 'string' && p.text) {
+                  const delta = p.text;
+                  fullResponse += delta;
+                  enqueueDelta(assistantMessageId, delta);
+                }
+              }
+            }
+          } catch {}
+        }
+      }
+
+      // 完成
+      flushDelta(assistantMessageId);
+      promptTokens = estimatePromptTokens(finalMessages, false);
+      completionTokens = estimateTokens(fullResponse, false);
+      win?.webContents.send('message-usage', { messageId: assistantMessageId, usage: { prompt_tokens: promptTokens, completion_tokens: completionTokens, total_tokens: promptTokens + completionTokens } });
+      win?.webContents.send('message', { messageId: assistantMessageId, delta: '[DONE]' });
+      return;
+    }
+
     // MiniMax特殊处理：使用原生fetch，因为API结构与OpenAI不同
     if (/minimaxi\.com/i.test(baseURL)) {
       
