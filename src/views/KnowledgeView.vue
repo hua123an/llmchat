@@ -88,7 +88,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
-import { listAllDocs, importText, searchInDoc, clearKnowledgeBase, getDocChunks, saveVectors, vectorSearch } from '../services/rag';
+import { listDocs as listAllDocs, importPlainText as importText, searchDoc as searchInDoc } from '../modules/knowledge/index';
+import { getDocChunks, saveVectors, vectorSearch } from '../services/rag';
+import { clearAll as clearKnowledgeBase } from '../modules/knowledge/index';
 import { deleteDoc } from '../services/rag/store';
 import { extractPdfText } from '../services/extractors/pdf';
 import { extractDocxText } from '../services/extractors/docx';
