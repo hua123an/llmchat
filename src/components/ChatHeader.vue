@@ -94,7 +94,11 @@ const autoRoute = () => {
 };
 
 const goKnowledge = () => {
-  try { router.push({ path: '/knowledge' }); } catch { window.location.hash = '#/knowledge'; }
+  try {
+    (store as any).isKnowledgeOpen = true;
+  } catch {
+    try { router.push({ path: '/knowledge' }); } catch { window.location.hash = '#/knowledge'; }
+  }
 };
 
 // A/B 已移除

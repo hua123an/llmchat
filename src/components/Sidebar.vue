@@ -357,7 +357,7 @@ const handleNavClick = (navItem: string) => {
       break;
     case 'knowledge':
       // 跳转到知识库页面
-      try { router.push({ path: '/knowledge' }); } catch { window.location.hash = '#/knowledge'; }
+      try { (store as any).isKnowledgeOpen = true; } catch { try { router.push({ path: '/knowledge' }); } catch { window.location.hash = '#/knowledge'; } }
       break;
       
     case 'image-generation':
