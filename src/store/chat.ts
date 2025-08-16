@@ -34,7 +34,7 @@ export interface Message {
   // 引用链接（用于联网检索时的参考来源输出）
   citations?: Array<{ index: number; title: string; url: string }>;
   // 知识库参考（本地段落）
-  kbRefs?: Array<{ index: number; text: string }>;
+  kbRefs?: Array<{ index: number; text: string; docId?: string; chunkId?: string }>;
   responseTime?: number; // 响应时间（毫秒）
   model?: string; // 使用的模型
   provider?: string; // 使用的服务商
@@ -856,11 +856,11 @@ ${curated}
             const qv = (vecs && vecs[0]) || [];
             const topK = Math.max(1, Math.min(10, Number(cfg.kbTopK || 4)));
 
-            const aggregated: Array<{ text: string }> = [];
+            const aggregated: Array<{ text: string; docId: string; chunkId: string }> = [];
             for (const id of chosenIds) {
               try {
                 const top = await vectorSearch(id, qv, topK);
-                for (const x of top) aggregated.push({ text: x.chunk.text });
+                for (const x of top) aggregated.push({ text: x.chunk.text, docId: x.chunk.docId, chunkId: x.chunk.id });
               } catch {}
             }
 
@@ -869,7 +869,7 @@ ${curated}
               const template: string = String(cfg.kbTemplate || '你可以使用以下知识库参考回答用户问题：\n{{refs}}\n请在答案中合理引用这些内容。');
               const sys = template.replace(/\{\{refs\}\}/g, refs);
               (payload.messagesToSend as any).unshift({ role: 'system', content: sys });
-              try { (assistantMessage as any).kbRefs = aggregated.slice(0, topK).map((x, i) => ({ index: i + 1, text: x.text })); } catch {}
+              try { (assistantMessage as any).kbRefs = aggregated.slice(0, topK).map((x, i) => ({ index: i + 1, text: x.text, docId: x.docId, chunkId: x.chunkId })); } catch {}
             }
           }
         }

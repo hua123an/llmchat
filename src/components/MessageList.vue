@@ -111,6 +111,9 @@
                         <div class="cite-index">{{ r.index }}</div>
                         <div class="cite-content">
                           <div class="cite-text" :title="r.text">{{ r.text }}</div>
+                          <div style="margin-top:4px; display:flex; gap:6px">
+                            <button class="preview-btn" @click.prevent="copyKBRef(r.text)">复制</button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -237,6 +240,15 @@ const savePageToKB = async (url: string, title?: string) => {
     (window as any).ElMessage?.success?.('已保存到知识库');
   } catch (e) {
     (window as any).ElMessage?.error?.('保存失败');
+  }
+};
+
+const copyKBRef = async (text: string) => {
+  try {
+    await navigator.clipboard.writeText(text || '');
+    (window as any).ElMessage?.success?.('已复制');
+  } catch {
+    (window as any).ElMessage?.error?.('复制失败');
   }
 };
 
