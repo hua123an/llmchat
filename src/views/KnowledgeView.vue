@@ -23,6 +23,8 @@
         <el-button>导入文件</el-button>
       </el-upload>
       <el-input v-model="urlToImport" placeholder="输入URL并回车导入" @keyup.enter="importFromUrl" style="max-width:360px" />
+      <el-input-number v-model="chunkSize" :min="200" :max="4000" :step="100" style="width:140px" />
+      <el-input-number v-model="overlap" :min="0" :max="800" :step="50" style="width:120px" />
     </div>
     <el-table :data="docs" height="420" style="width: 100%">
       <el-table-column prop="name" label="名称" width="240" />
@@ -61,6 +63,10 @@
         </div>
       </div>
     </el-dialog>
+    <el-dialog v-model="importing" title="正在导入" width="520px" :close-on-click-modal="false" :show-close="false">
+      <div>文档：{{ importingName }}</div>
+      <el-progress :percentage="Math.floor((progress.done/progress.total)*100)||0" />
+    </el-dialog>
   </div>
 </template>
 
@@ -81,6 +87,11 @@ const resultVisible = ref(false);
 const results = ref<any[]>([]);
 let lastDocId: string | null = null;
 const urlToImport = ref('');
+const chunkSize = ref<number>(800);
+const overlap = ref<number>(100);
+const importing = ref<boolean>(false);
+const importingName = ref<string>('');
+const progress = ref<{done:number,total:number}>({done:0,total:1});
 
 const refresh = async () => { docs.value = await listAllDocs(); };
 const openImport = () => { importVisible.value = true; };
@@ -111,14 +122,23 @@ const onFileSelect = async (file:any) => {
     const raw = file?.raw as File;
     if (!raw) return;
     const buf = await raw.arrayBuffer();
-    let text = '';
-    if (/\.pdf$/i.test(raw.name)) text = await extractPdfText(buf);
-    else if (/\.docx$/i.test(raw.name)) text = await extractDocxText(buf);
-    else if (/\.txt$/i.test(raw.name)) text = new TextDecoder().decode(buf);
-    else { ElMessage.error('不支持的文件类型'); return; }
-    await importText(raw.name.replace(/\.(pdf|docx|txt)$/i,''), text);
-    await refresh();
-    ElMessage.success('文件已导入');
+    // 使用 worker 导入
+    const worker = new Worker(new URL('../workers/importWorker.ts', import.meta.url), { type: 'module' });
+    importing.value = true; importingName.value = raw.name; progress.value = {done:0,total:1};
+    worker.onmessage = async (e: MessageEvent) => {
+      const data: any = e.data;
+      if (data?.type === 'progress') {
+        progress.value = { done: Number(data.done||0), total: Number(data.total||1) };
+      } else if (data?.type === 'done') {
+        worker.terminate(); importing.value = false; progress.value = {done:1,total:1};
+        await refresh(); ElMessage.success('文件已导入');
+      } else if (data?.type === 'error') {
+        worker.terminate(); importing.value = false; ElMessage.error('导入失败: '+(data.message||''));
+      }
+    };
+    const ext = (/\.([a-z0-9]+)$/i.exec(raw.name)?.[1] || 'txt');
+    const docId = `doc-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+    worker.postMessage({ type: 'import', task: { docId, name: raw.name.replace(/\.(pdf|docx|txt)$/i,''), ext, arrayBuffer: buf, chunkSize: chunkSize.value, overlap: overlap.value } });
   } catch (e:any) {
     ElMessage.error('导入失败: '+(e?.message||''));
   }
