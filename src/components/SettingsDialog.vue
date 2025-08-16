@@ -230,6 +230,21 @@
               <label class="setting-label">启用发送时知识库检索</label>
               <el-switch v-model="enableKBRetrieval" @change="saveSettings" />
             </div>
+            <div class="setting-item">
+              <label class="setting-label">Top‑k 段落数</label>
+              <el-input-number v-model="kbTopK" :min="1" :max="10" @change="saveSettings" />
+            </div>
+            <div class="setting-item">
+              <label class="setting-label">注入模板</label>
+              <el-input
+                v-model="kbTemplate"
+                type="textarea"
+                :rows="3"
+                placeholder="例如：你可以使用以下知识库参考回答用户问题：\n{{refs}}\n请在答案中合理引用这些内容。"
+                @change="saveSettings"
+                class="setting-control"
+              />
+            </div>
           </div>
         </el-tab-pane>
 
@@ -378,6 +393,8 @@ const wBing = ref<number>(3);
 const wBaidu = ref<number>(2);
 const wDuck = ref<number>(1);
 const enableKBRetrieval = ref<boolean>(false);
+const kbTopK = ref<number>(4);
+const kbTemplate = ref<string>('你可以使用以下知识库参考回答用户问题：\n{{refs}}\n请在答案中合理引用这些内容。');
 
 // 语音设置
 const sttProvider = ref<'browser'|'xfyun'>('browser');
@@ -748,7 +765,9 @@ const handleSave = () => {
     searchConcurrency: searchConcurrency.value,
     searchWeights: { google: wGoogle.value, bing: wBing.value, baidu: wBaidu.value, duck: wDuck.value },
     updateBaseUrl: updateBaseUrl.value,
-    enableKBRetrieval: enableKBRetrieval.value
+    enableKBRetrieval: enableKBRetrieval.value,
+    kbTopK: kbTopK.value,
+    kbTemplate: kbTemplate.value
   };
   
   localStorage.setItem('appSettings', JSON.stringify(settings));
@@ -768,6 +787,8 @@ const saveSettings = () => {
     cfg.searchConcurrency = searchConcurrency.value;
     cfg.searchWeights = { google: wGoogle.value, bing: wBing.value, baidu: wBaidu.value, duck: wDuck.value };
     cfg.enableKBRetrieval = enableKBRetrieval.value;
+    cfg.kbTopK = kbTopK.value;
+    cfg.kbTemplate = kbTemplate.value;
     localStorage.setItem('appSettings', JSON.stringify(cfg));
   } catch {}
 };
@@ -804,6 +825,8 @@ const loadSettings = () => {
       wBaidu.value = Number(sw.baidu ?? 2);
       wDuck.value = Number(sw.duck ?? 1);
       enableKBRetrieval.value = !!settings.enableKBRetrieval;
+      kbTopK.value = Number(settings.kbTopK || 4);
+      kbTemplate.value = String(settings.kbTemplate || '你可以使用以下知识库参考回答用户问题：\n{{refs}}\n请在答案中合理引用这些内容。');
     }
 
     // 语音设置独立存储于 voiceSettings

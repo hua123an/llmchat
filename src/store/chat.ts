@@ -33,6 +33,8 @@ export interface Message {
   }>;
   // 引用链接（用于联网检索时的参考来源输出）
   citations?: Array<{ index: number; title: string; url: string }>;
+  // 知识库参考（本地段落）
+  kbRefs?: Array<{ index: number; text: string }>;
   responseTime?: number; // 响应时间（毫秒）
   model?: string; // 使用的模型
   provider?: string; // 使用的服务商
@@ -852,10 +854,13 @@ ${curated}
             // 使用阿里云生成查询向量
             const vecs: number[][] = await (window as any).electronAPI.embedTexts('aliyun', [userMessage.content || ''], { model: 'text-embedding-v1' });
             const qv = (vecs && vecs[0]) || [];
-            const top = await vectorSearch(firstDoc.id, qv, 4);
+            const topK = Math.max(1, Math.min(10, Number(cfg.kbTopK || 4)));
+            const top = await vectorSearch(firstDoc.id, qv, topK);
             if (top && top.length > 0) {
               const refs = top.map((x, i) => `［R${i+1}］${x.chunk.text}`).join('\n');
-              (payload.messagesToSend as any).unshift({ role: 'system', content: `你可以使用以下知识库参考回答用户问题：\n${refs}\n请在答案中合理引用这些内容。` });
+              const template: string = String(cfg.kbTemplate || '你可以使用以下知识库参考回答用户问题：\n{{refs}}\n请在答案中合理引用这些内容。');
+              const sys = template.replace(/\{\{refs\}\}/g, refs);
+              (payload.messagesToSend as any).unshift({ role: 'system', content: sys });
             }
           }
         }
