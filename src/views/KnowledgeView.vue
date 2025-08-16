@@ -67,13 +67,27 @@
       <div>文档：{{ importingName }}</div>
       <el-progress :percentage="Math.floor((progress.done/progress.total)*100)||0" />
     </el-dialog>
+
+    <el-dialog v-model="indexVisible" title="向量索引" width="520px">
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px">
+        <el-select v-model="selectedDocId" placeholder="选择文档">
+          <el-option v-for="d in docs" :key="d.id" :label="d.name" :value="d.id" />
+        </el-select>
+        <el-button type="primary" @click="buildIndex">生成索引</el-button>
+      </div>
+      <div v-if="indexing">正在生成向量... {{ indexProgress }}</div>
+      <div style="display:flex; gap:8px; align-items:center; margin-top:8px">
+        <el-input v-model="queryText" placeholder="输入查询语句..." @keyup.enter="searchByVector" />
+        <el-button @click="searchByVector">相似检索</el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
-import { listAllDocs, importText, searchInDoc, clearKnowledgeBase } from '../services/rag';
+import { listAllDocs, importText, searchInDoc, clearKnowledgeBase, getDocChunks, saveVectors, vectorSearch } from '../services/rag';
 import { deleteDoc } from '../services/rag/store';
 import { extractPdfText } from '../services/extractors/pdf';
 import { extractDocxText } from '../services/extractors/docx';
@@ -92,6 +106,11 @@ const overlap = ref<number>(100);
 const importing = ref<boolean>(false);
 const importingName = ref<string>('');
 const progress = ref<{done:number,total:number}>({done:0,total:1});
+const indexVisible = ref(false);
+const selectedDocId = ref<string>('');
+const indexing = ref(false);
+const indexProgress = ref('');
+const queryText = ref('');
 
 const refresh = async () => { docs.value = await listAllDocs(); };
 const openImport = () => { importVisible.value = true; };
@@ -169,6 +188,35 @@ const importFromUrl = async () => {
     ElMessage.success('URL 已导入');
   } catch (e:any) {
     ElMessage.error('URL 导入失败: '+(e?.message||''));
+  }
+};
+
+// 索引与检索
+const openIndexDialog = () => { indexVisible.value = true; if (!selectedDocId.value && docs.value.length) selectedDocId.value = docs.value[0].id; };
+const buildIndex = async () => {
+  const docId = selectedDocId.value; if (!docId) return;
+  try {
+    indexing.value = true; indexProgress.value = '加载分块...';
+    const chunks = await getDocChunks(docId);
+    if (!chunks.length) { ElMessage.warning('该文档暂无分块'); indexing.value=false; return; }
+    indexProgress.value = `嵌入 ${chunks.length} 段...`;
+    const texts = chunks.map(c => c.text);
+    const vectors: number[][] = await (window as any).electronAPI.embedTexts('aliyun', texts, { model: 'text-embedding-v1' });
+    await saveVectors(docId, chunks, vectors.map((v, i) => ({ id: chunks[i].id, vector: v })) as any);
+    ElMessage.success('索引已生成');
+  } catch (e:any) {
+    ElMessage.error('生成索引失败: '+(e?.message||''));
+  } finally { indexing.value = false; }
+};
+const searchByVector = async () => {
+  const q = queryText.value.trim(); const docId = selectedDocId.value; if (!q || !docId) return;
+  try {
+    const vectors: number[][] = await (window as any).electronAPI.embedTexts('aliyun', [q], { model: 'text-embedding-v1' });
+    const vec = (vectors && vectors[0]) || [];
+    const res = await vectorSearch(docId, vec, 8);
+    results.value = res; resultVisible.value = true;
+  } catch (e:any) {
+    ElMessage.error('检索失败: '+(e?.message||''));
   }
 };
 

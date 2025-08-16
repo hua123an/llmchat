@@ -571,6 +571,28 @@ app.whenReady().then(() => {
     ipcMain.handle('fetch-remote-update-meta', async (_e, baseUrl: string) => {
       try { return await fetchRemoteUpdateMeta(baseUrl); } catch { return null; }
     });
+    // Embeddings (Aliyun/OpenAI compatible)
+    ipcMain.handle('embed-texts', async (_e, providerName: string, texts: string[], options?: { model?: string }) => {
+      try {
+        const providers = (store.get('providers') as { name: string; baseUrl: string }[]) || [];
+        const provider = providers.find(p => p.name === providerName) || providers.find(p => /aliyun|百炼|dashscope/i.test(p.name));
+        if (!provider) throw new Error('Provider not found');
+        const apiKey = secureStorage.getApiKey(provider.name);
+        if (!apiKey) throw new Error('API key missing');
+        const base = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+        const url = `${base}/embeddings`;
+        const model = options?.model || 'text-embedding-v1';
+        const body = { model, input: texts } as any;
+        const resp = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(body) });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const json: any = await resp.json();
+        const data = Array.isArray(json.data) ? json.data : [];
+        const vectors = data.map((d: any) => d?.embedding || []);
+        return vectors;
+      } catch (e: any) {
+        return Promise.reject(new Error(e?.message || 'embed failed'));
+      }
+    });
   } catch (e) {
     console.warn('updater IPC handlers init failed:', e);
   }

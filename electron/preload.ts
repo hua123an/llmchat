@@ -41,6 +41,8 @@ export interface ElectronAPI {
   setAutoUpdateConfig: (cfg: { autoCheck?: boolean; autoDownload?: boolean; channel?: string }) => Promise<{ ok: boolean; message?: string }>;
   fetchRemoteUpdateMeta: (url: string) => Promise<any>;
   
+  // Embeddings
+  embedTexts: (providerName: string, texts: string[], options?: { model?: string }) => Promise<number[][]>;
 
 }
 
@@ -86,6 +88,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onAutoUpdate: (callback: (event: IpcRendererEvent, ...args: any[]) => void) => ipcRenderer.on('auto-update', callback),
   setAutoUpdateConfig: (cfg: { autoCheck?: boolean; autoDownload?: boolean; channel?: string }) => ipcRenderer.invoke('updater-set-config', cfg),
   fetchRemoteUpdateMeta: (url: string) => ipcRenderer.invoke('fetch-remote-update-meta', url),
+  // Embeddings
+  embedTexts: (providerName: string, texts: string[], options?: { model?: string }) => ipcRenderer.invoke('embed-texts', providerName, texts, options),
   
 
 });
