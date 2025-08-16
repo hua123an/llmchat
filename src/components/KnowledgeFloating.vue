@@ -64,7 +64,7 @@
         <el-dialog v-model="editorOpen" :title="currentDoc?.name || 'Document'" width="70%" append-to-body :close-on-click-modal="false" destroy-on-close>
           <div class="editor-wrap">
             <div v-if="editorLoading" class="editor-loading">Loading...</div>
-            <el-input v-else v-model="editorContent" type="textarea" :autosize="{minRows: 16, maxRows: 30}" />
+            <el-input v-else ref="editorInput" v-model="editorContent" type="textarea" :autosize="{minRows: 16, maxRows: 30}" />
           </div>
           <template #footer>
             <el-button @click="editorOpen=false">{{ t('common.cancel') }}</el-button>
@@ -247,12 +247,15 @@ const editorOpen = ref(false);
 const editorContent = ref('');
 const currentDoc = ref<{ id: string; name: string } | null>(null);
 const editorLoading = ref(false);
+const editorInput = ref<any>(null);
+const currentChunks = ref<Array<{ id: string; index: number; text: string }>>([]);
 const openDoc = async (d: {id: string; name: string}) => {
   currentDoc.value = { id: d.id, name: d.name } as any;
   editorOpen.value = true;
   editorLoading.value = true;
   try {
     const chunks = await getChunksByDoc(d.id);
+    currentChunks.value = chunks || [];
     const list = (chunks || []).sort((a,b)=>a.index-b.index);
     const pieces: string[] = [];
     const batch = 1000; // 每批组装1000个chunk，仅在最后一次性赋值，避免反复触发大文本的响应式更新
@@ -266,6 +269,17 @@ const openDoc = async (d: {id: string; name: string}) => {
       } else {
         editorContent.value = pieces.join('');
         editorLoading.value = false;
+        // 若存在定位锚点则选中对应分块
+        try {
+          const raw = localStorage.getItem('kbLocate');
+          if (raw) {
+            const anchor = JSON.parse(raw);
+            if (anchor?.chunkId) {
+              highlightChunk(anchor.chunkId);
+              localStorage.removeItem('kbLocate');
+            }
+          }
+        } catch {}
       }
     };
     buildNext();
@@ -289,6 +303,45 @@ function formatBytes(bytes: number): string {
   while (n >= 1024 && i < sizes.length - 1) { n /= 1024; i++; }
   return `${n.toFixed(n < 10 && i > 0 ? 1 : 0)} ${sizes[i]}`;
 }
+
+// 高亮并滚动到指定 chunk
+function highlightChunk(chunkId: string) {
+  try {
+    const chunks = (currentChunks.value || []).sort((a,b)=>a.index-b.index);
+    const targetIdx = chunks.findIndex(c => c.id === chunkId);
+    if (targetIdx < 0) return;
+    const start = chunks.slice(0, targetIdx).reduce((s, c) => s + (c.text?.length || 0), 0);
+    const len = chunks[targetIdx].text?.length || 0;
+    // 获取 textarea 元素
+    const ta = editorInput.value?.textarea || editorInput.value?.$refs?.textarea || (editorInput.value?.$el && editorInput.value.$el.querySelector('textarea'));
+    if (ta && typeof ta.setSelectionRange === 'function') {
+      ta.focus();
+      ta.setSelectionRange(start, start + len);
+      // 粗略滚动：按起始字符占比滚动
+      const total = (editorContent.value || '').length || 1;
+      ta.scrollTop = Math.max(0, (ta.scrollHeight * (start / total)) - ta.clientHeight / 3);
+    }
+  } catch {}
+}
+
+// 打开面板时尝试载入定位锚点
+onMounted(async () => {
+  // 当悬浮面板打开时处理锚点
+  const tryLocate = async () => {
+    try {
+      const raw = localStorage.getItem('kbLocate');
+      if (!raw) return;
+      const anchor = JSON.parse(raw);
+      if (anchor?.docId) {
+        const doc = docs.value.find(d => d.id === anchor.docId);
+        if (doc) await openDoc(doc);
+      }
+    } catch {}
+  };
+  // 首次加载文档列表后再尝试
+  await refreshDocs();
+  if (isOpen.value) await tryLocate();
+});
 </script>
 
 <style scoped>
