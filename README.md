@@ -30,10 +30,10 @@
 - **📎 文件处理** - 支持 PDF、Word、图片等多种格式
 - **🌐 网页预览** - 应用内预览网页内容，一键导入知识库
 
-### 🚀 更新亮点 (v2.0.3)
+### 🚀 更新亮点 (v2.0.4)
  - 知识库增强版（基础）：文本/文件（PDF、DOCX、TXT）/URL 导入，文档列表、单文档删除、全部清空，本地检索（BM25）与结果预览，侧栏新增入口，新增 `#/knowledge` 路由
  - 自动更新体验优化：设置页“检查更新”新增下载进度条，强制更新浮层可显示进度；修复部分环境下不弹窗的问题
- - Bug 修复与细节：类型错误与无障碍细节修复、下载链接与版本展示同步到 v2.0.3
+ - Bug 修复与细节：类型错误与无障碍细节修复、下载链接与版本展示同步到 v2.0.4
 
 ### 🚀 新增功能 (v2.0.0)
  - 架构重构：服务层/组合式/小型stores拆分
@@ -62,8 +62,8 @@
 访问 [下载页面](https://huaan666.site/update/download.html) 获取最新版本
 
 #### 方式二：直接下载
-- **安装版**: [ChatLLM-2.0.3-x64.exe](https://github.com/hua123an/llmchat/releases/download/v2.0.3/ChatLLM-2.0.3-x64.exe)
-- **便携版**: [ChatLLM-2.0.3-x64-portable.exe](https://github.com/hua123an/llmchat/releases/download/v2.0.3/ChatLLM-2.0.3-x64-portable.exe)
+- **安装版**: [ChatLLM-2.0.4-x64.exe](https://github.com/hua123an/llmchat/releases/download/v2.0.4/ChatLLM-2.0.4-x64.exe)
+- **便携版**: [ChatLLM-2.0.4-x64-portable.exe](https://github.com/hua123an/llmchat/releases/download/v2.0.4/ChatLLM-2.0.4-x64-portable.exe)
 
 #### 方式三：GitHub Releases
 访问 [GitHub Releases](https://github.com/hua123an/llmchat/releases) 页面下载
@@ -178,10 +178,9 @@ chatllm/
 
 查看 [CHANGELOG.md](CHANGELOG.md) 了解版本更新详情。
 
-### 🆕 最新版本 v2.0.3 (2025-08-15)
-- 知识库增强版（文本/文件/URL 导入、列表、删除、本地检索与预览）
-- 自动更新进度条与浮层优化，安装版支持一键下载并重启安装
-- 修复若干小问题并统一版本链接到 v2.0.3
+### 🆕 最新版本 v2.0.4 (2025-08-16)
+ - 自动更新稳定性优化与发布说明编码修复
+ - 知识库增强基础功能延续优化
 
 ## 📞 支持与反馈
 
