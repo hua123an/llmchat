@@ -23,6 +23,11 @@ export async function importPlainText(name: string, text: string) {
   return mod.importText(name, text);
 }
 
+export async function clearAll() {
+  const mod = await import('../../services/rag');
+  return mod.clearKnowledgeBase();
+}
+
 export async function embedAndSave(docId: string, provider: 'aliyun' | 'openai', apiKey: string) {
   const mod = await import('../../services/rag');
   const chunks = await mod.getDocChunks(docId);

@@ -208,7 +208,7 @@ import { ElMessage } from 'element-plus';
 import { useChatStore } from '../store/chat';
 import type { ChatTab } from '../store/chat';
 import { themeManager } from '../utils/themeManager';
-import { clearAll as ragClearAll } from '../services/rag/store';
+import { clearAll as ragClearAll } from '../modules/knowledge/index';
 import { switchLanguage, getCurrentLanguage } from '../locales';
 
 const store = useChatStore();
