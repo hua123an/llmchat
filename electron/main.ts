@@ -212,7 +212,7 @@ function setupAutoUpdater() {
 
     autoUpdater.on('download-progress', (progress) => {
       win?.webContents.send('auto-update', { type: 'progress', progress: {
-        percent: progress?.percent ?? 0,
+        percent: Math.floor(progress?.percent ?? 0),
         transferred: progress?.transferred ?? 0,
         total: progress?.total ?? 0,
         bytesPerSecond: progress?.bytesPerSecond ?? 0

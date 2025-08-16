@@ -173,6 +173,7 @@
                   <span class="link-icon">🔄</span>
                   {{ t('settings.about.links.checkUpdates') }}
                 </el-button>
+                <el-progress v-if="updateProgressVisible" :percentage="updateProgress" style="width: 180px; margin-left:8px" />
                 <el-switch v-model="autoCheckUpdate" active-text="启动自检" inactive-text="手动检查" @change="applyUpdateConfig" />
                 <el-switch v-model="autoDownloadUpdate" active-text="自动下载" inactive-text="手动下载" @change="applyUpdateConfig" />
                 <el-select v-model="updateChannel" class="setting-control" style="width: 120px" @change="applyUpdateConfig" popper-class="wide-select-popper" :fit-input-width="false">
@@ -679,10 +680,12 @@ try {
         (window as any).ElMessage?.success?.('当前已是最新版本');
         break;
       case 'progress':
-        // 可加入进度条，这里用信息提示
-        (window as any).ElMessage?.info?.(`正在下载更新... ${Math.floor(payload.progress?.percent || 0)}%`);
+        updateProgressVisible.value = true;
+        updateProgress.value = Math.floor(payload.progress?.percent || 0);
         break;
       case 'downloaded': {
+        updateProgressVisible.value = false;
+        updateProgress.value = 100;
         const info = payload?.info;
         let notes = payload?.meta?.notes || info?.releaseNotes || '';
         if (!notes) {
@@ -823,6 +826,8 @@ const loadSettings = () => {
 const appVersionEnv = (import.meta as any).env?.APP_VERSION || (typeof window !== 'undefined' ? (window as any).__APP_VERSION__ : '');
 const appVersionRef = ref<string>(appVersionEnv || '');
 const versionText = computed(() => appVersionRef.value || '');
+const updateProgress = ref<number>(0);
+const updateProgressVisible = ref<boolean>(false);
 
 onMounted(async () => {
   if (!appVersionRef.value && (window as any).electronAPI?.getAppVersion) {

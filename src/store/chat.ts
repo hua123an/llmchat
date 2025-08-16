@@ -232,8 +232,7 @@ export const useChatStore = defineStore('chat', () => {
 
   // 强制更新遮罩层可见性
   const isUpdateOverlayVisible = computed(() => {
-    return forceUpdateState.value.required && 
-           ['available', 'downloading', 'downloaded'].includes(forceUpdateState.value.status);
+    return ['available', 'downloading', 'downloaded'].includes(forceUpdateState.value.status);
   });
 
   // 持久化方法
