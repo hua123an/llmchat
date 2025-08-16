@@ -201,6 +201,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import AppSelect from './common/AppSelect.vue';
 // import { useI18n } from 'vue-i18n';
 import { ElMessage } from 'element-plus';
@@ -211,6 +212,7 @@ import { clearAll as ragClearAll } from '../services/rag/store';
 import { switchLanguage, getCurrentLanguage } from '../locales';
 
 const store = useChatStore();
+const router = useRouter();
 // const { t } = useI18n();
 
 // 当前激活的导航项
@@ -355,7 +357,7 @@ const handleNavClick = (navItem: string) => {
       break;
     case 'knowledge':
       // 跳转到知识库页面
-      window.location.hash = '#/knowledge';
+      try { router.push({ path: '/knowledge' }); } catch { window.location.hash = '#/knowledge'; }
       break;
       
     case 'image-generation':
