@@ -80,9 +80,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { chunkText } from '../services/rag/chunker';
-import { listDocs as listDocsAgg } from '../modules/knowledge/index';
-import { putDoc, clearAll, createDoc, appendChunks, getChunksByDoc } from '../services/rag/store';
+import { chunkText, listDocs as listDocsAgg, putDoc, clearAll, createDoc, appendChunks } from '../modules/knowledge/index';
+import { getChunksByDoc } from '../services/rag/store';
 import { extractPdfText } from '../services/extractors/pdf';
 import { extractDocxText } from '../services/extractors/docx';
 import { useChatStore } from '../store/chat';

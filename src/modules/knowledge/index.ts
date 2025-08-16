@@ -41,4 +41,27 @@ export async function vectorTopK(docId: string, queryVector: number[], topK = 5)
   return mod.vectorSearch(docId, queryVector, topK);
 }
 
+// --- Low-level helpers for UI flows that need fine control ---
+export { chunkText } from '../../services/rag/chunker';
+
+export async function createDoc(meta: import('../../services/rag').DocMeta) {
+  const mod = await import('../../services/rag/store');
+  return mod.createDoc(meta);
+}
+
+export async function appendChunks(chunks: import('../../services/rag/chunker').Chunk[], batchSize = 200) {
+  const mod = await import('../../services/rag/store');
+  return mod.appendChunks(chunks as any, batchSize);
+}
+
+export async function putDoc(meta: import('../../services/rag').DocMeta, chunks: import('../../services/rag/chunker').Chunk[]) {
+  const mod = await import('../../services/rag/store');
+  return mod.putDoc(meta, chunks);
+}
+
+export async function getDocChunksRaw(docId: string) {
+  const mod = await import('../../services/rag/store');
+  return mod.getChunksByDoc(docId);
+}
+
 

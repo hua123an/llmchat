@@ -1,5 +1,5 @@
-import { chunkText } from '../services/rag/chunker';
-import { putDoc, type DocMeta } from '../services/rag/store';
+import { chunkText, putDoc } from '../modules/knowledge/index';
+import type { DocMeta } from '../services/rag/store';
 
 self.onmessage = async (e: MessageEvent) => {
   const { docId, name, text } = e.data as { docId: string; name: string; text: string };

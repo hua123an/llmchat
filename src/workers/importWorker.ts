@@ -1,5 +1,5 @@
-import { chunkText } from '../services/rag/chunker';
-import { appendChunks, createDoc, type DocMeta } from '../services/rag/store';
+import { chunkText, appendChunks, createDoc } from '../modules/knowledge/index';
+import type { DocMeta } from '../services/rag/store';
 
 type ImportTask = {
   docId: string;

@@ -223,8 +223,7 @@ import WebPreviewDialog from './common/WebPreviewDialog.vue';
 import { copyToClipboard } from '../services/clipboard';
 import { useChatMutation } from '../services/router/modelRouter';
 import { fetchReadable } from '../services/search/web';
-import { chunkText } from '../services/rag/chunker';
-import { createDoc, appendChunks } from '../services/rag/store';
+import { chunkText, createDoc, appendChunks } from '../modules/knowledge/index';
 
 const store = useChatStore();
 const { t } = useI18n();
