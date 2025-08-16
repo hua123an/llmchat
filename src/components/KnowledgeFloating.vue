@@ -81,7 +81,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { chunkText } from '../services/rag/chunker';
-import { putDoc, listDocs, clearAll, createDoc, appendChunks, getChunksByDoc } from '../services/rag/store';
+import { listDocs as listDocsAgg } from '../modules/knowledge/index';
+import { putDoc, clearAll, createDoc, appendChunks, getChunksByDoc } from '../services/rag/store';
 import { extractPdfText } from '../services/extractors/pdf';
 import { extractDocxText } from '../services/extractors/docx';
 import { useChatStore } from '../store/chat';
@@ -112,7 +113,7 @@ const MAX_DOC_SIZE_MB = 15; // pdf/docx
 const isImporting = ref(false);
 const progress = ref(0);
 const progressText = ref('');
-const refreshDocs = async () => { docs.value = await listDocs(); };
+const refreshDocs = async () => { docs.value = await listDocsAgg(); };
 
 const triggerFile = () => fileInput.value?.click();
 

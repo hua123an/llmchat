@@ -339,13 +339,14 @@ import { useChatStore } from '../store/chat';
 import { ElMessage } from 'element-plus';
 import { themeManager } from '../utils/themeManager';
 import { supportedLocales, switchLanguage, getCurrentLanguage } from '../locales';
-import { listDocs } from '../services/rag/store';
+import { listDocs } from '../modules/knowledge/index';
+import * as ipc from '../modules/system/ipc';
 import { voiceService } from '../services/VoiceService';
 
 // 版本号：从构建注入或从 window 兜底
 const appVersion = (import.meta as any).env?.APP_VERSION || (typeof window !== 'undefined' ? (window as any).__APP_VERSION__ : '');
-if (!appVersion && typeof window !== 'undefined' && (window as any).electronAPI?.getAppVersion) {
-  (window as any).electronAPI.getAppVersion().then((v: string) => {
+if (!appVersion && typeof window !== 'undefined') {
+  ipc.getAppVersion().then((v: string) => {
     try { (document.querySelector('.app-version') as HTMLElement).innerText = `${t('settings.about.version')} ${v || ''}` } catch {}
   }).catch(() => {});
 }
@@ -448,7 +449,7 @@ const saveProviders = async () => {
       .filter(p => p.name.trim() && p.baseUrl.trim())
       .map(p => ({ name: p.name.trim(), baseUrl: p.baseUrl.trim() }));
     
-    const result = await (window as any).electronAPI?.saveProviders?.(validProviders);
+    const result = await ipc.saveProviders(validProviders);
     if (result?.ok) {
       ElMessage.success(t('settings.providers.saveSuccess', '提供商配置已保存'));
     } else {
@@ -478,7 +479,7 @@ const handleKeyInputFocus = async (provider: any) => {
   if (!provider.__keyInput && provider.__hasKey) {
     // 显示预览
     try {
-      const result = await (window as any).electronAPI?.getProviderKeyPreview?.(provider.name);
+      const result = await ipc.getProviderKeyPreview(provider.name);
       if (result?.preview) {
         provider.__keyInput = result.preview;
       }
@@ -492,7 +493,7 @@ const handleKeyInputFocus = async (provider: any) => {
 const toggleKeyVisibility = async (provider: any) => {
   if (!provider.__showKey && provider.__hasKey) {
     try {
-      const result = await (window as any).electronAPI?.getProviderKeyPreview?.(provider.name);
+      const result = await ipc.getProviderKeyPreview(provider.name);
       if (result?.preview) {
         provider.__keyInput = result.preview;
       }
@@ -508,12 +509,12 @@ const saveKey = async (provider: any) => {
   if (!provider.__keyInput || provider.__keyInput.includes('...')) return;
   
   try {
-    const result = await (window as any).electronAPI?.setProviderKey?.(provider.name, provider.__keyInput);
+    const result = await ipc.setProviderKey(provider.name, provider.__keyInput);
     if (result?.ok) {
       provider.__hasKey = true;
       ElMessage.success(t('settings.providers.keySuccess', 'API密钥已保存'));
       // 更新为预览模式
-      const previewResult = await (window as any).electronAPI?.getProviderKeyPreview?.(provider.name);
+      const previewResult = await ipc.getProviderKeyPreview(provider.name);
       if (previewResult?.preview) {
         provider.__keyInput = previewResult.preview;
       }
@@ -529,7 +530,7 @@ const saveKey = async (provider: any) => {
 // 删除API密钥
 const removeKey = async (provider: any) => {
   try {
-    const result = await (window as any).electronAPI?.removeProviderKey?.(provider.name);
+    const result = await ipc.removeProviderKey(provider.name);
     if (result?.ok) {
       provider.__hasKey = false;
       provider.__keyInput = '';
@@ -552,7 +553,7 @@ const testProvider = async (provider: any) => {
   }
   
   try {
-    const result = await (window as any).electronAPI?.testProvider?.(provider.name);
+    const result = await ipc.testProvider(provider.name);
     if (result?.ok) {
       ElMessage.success(t('settings.providers.testSuccess', '连接测试成功'));
     } else {
@@ -568,7 +569,7 @@ const testProvider = async (provider: any) => {
 const loadProviders = async () => {
   try {
     // 加载提供商列表
-    const providers = await (window as any).electronAPI?.getProviders?.() || [];
+    const providers = await ipc.getProviders() || [];
     providerList.value = providers.map((p: any) => ({
       name: p.name || '',
       baseUrl: p.baseUrl || '',
@@ -581,7 +582,7 @@ const loadProviders = async () => {
     for (const provider of providerList.value) {
       if (provider.name) {
         try {
-          const result = await (window as any).electronAPI?.hasProviderKey?.(provider.name);
+          const result = await ipc.hasProviderKey(provider.name);
           provider.__hasKey = result?.hasKey || false;
         } catch (error) {
           console.warn('Failed to check key for', provider.name, error);
@@ -634,8 +635,8 @@ const openDocs = () => {
 const checkUpdates = async () => {
   try {
     // 本地自动检测（基于 GitHub 最新版本）
-    const latest = await (window as any).electronAPI?.checkLatestVersion?.();
-    const current = appVersionRef.value || (await (window as any).electronAPI?.getAppVersion?.());
+    const latest = await ipc.checkLatestVersion();
+    const current = appVersionRef.value || (await ipc.getAppVersion());
     const curTag = `v${(current || '').trim()}`;
     if (latest?.tag && latest.tag !== curTag) {
       (window as any).ElMessageBox?.confirm?.(
@@ -649,7 +650,7 @@ const checkUpdates = async () => {
       ElMessage.success('当前已是最新版本');
     }
     // 仍然支持内置 autoUpdater 检查
-    (window as any).electronAPI?.checkForUpdates?.();
+    await ipc.updaterCheck();
   } catch {
     ElMessage.error(t('settings.messages.loadError'));
   }
@@ -657,13 +658,13 @@ const checkUpdates = async () => {
 
 const applyUpdateConfig = async () => {
   try {
-    await (window as any).electronAPI?.setAutoUpdateConfig?.({ autoCheck: autoCheckUpdate.value, autoDownload: autoDownloadUpdate.value, channel: updateChannel.value });
+    await ipc.updaterSetConfig({ autoCheck: autoCheckUpdate.value, autoDownload: autoDownloadUpdate.value, channel: updateChannel.value });
   } catch {}
 };
 
 // 监听主进程的自动更新事件
 try {
-  (window as any).electronAPI?.onAutoUpdate?.(async (_e: any, payload: any) => {
+  ipc.updaterOn(async (_e: any, payload: any) => {
     if (!payload || !payload.type) return;
     switch (payload.type) {
       case 'checking':
@@ -676,7 +677,7 @@ try {
           try {
             const base = getUpdateBaseUrl();
             if (base) {
-              const meta = await (window as any).electronAPI?.fetchRemoteUpdateMeta?.(base);
+              const meta = await ipc.fetchRemoteUpdateMeta(base);
               if (meta?.notes) notes = meta.notes;
             }
           } catch {}
@@ -685,10 +686,10 @@ try {
         const message = notes ? markdownToHtml(notes) : '是否立即下载并更新？';
         if (autoDownloadUpdate.value) {
           (window as any).ElMessage?.info?.('检测到新版本，已开始自动下载...');
-          (window as any).electronAPI?.downloadUpdate?.();
+          await ipc.updaterDownload();
         } else {
           (window as any).ElMessageBox?.confirm?.(message, title || '更新可用', { type: 'info', dangerouslyUseHTMLString: true })
-            .then(() => (window as any).electronAPI?.downloadUpdate?.())
+            .then(() => ipc.updaterDownload())
             .catch(() => {});
         }
         break;
@@ -709,7 +710,7 @@ try {
           try {
             const base = getUpdateBaseUrl();
             if (base) {
-              const meta = await (window as any).electronAPI?.fetchRemoteUpdateMeta?.(base);
+              const meta = await ipc.fetchRemoteUpdateMeta(base);
               if (meta?.notes) notes = meta.notes;
             }
           } catch {}
@@ -717,14 +718,14 @@ try {
         const force = payload?.meta?.force === true;
         const title = `更新完成 ${info?.version || ''}`.trim();
         const message = notes ? markdownToHtml(notes) : '更新已下载，是否现在重启安装？';
-        const doInstall = () => (window as any).electronAPI?.quitAndInstall?.();
+        const doInstall = () => ipc.updaterQuitAndInstall();
         if (force) {
           (window as any).ElMessageBox?.alert?.(message, title || '更新完成', { type: 'warning', confirmButtonText: '立即重启安装', dangerouslyUseHTMLString: true })
             .then(() => doInstall())
             .catch(() => doInstall());
         } else {
           (window as any).ElMessageBox?.confirm?.(message, title || '更新完成', { type: 'success', dangerouslyUseHTMLString: true })
-          .then(() => (window as any).electronAPI?.quitAndInstall?.())
+          .then(() => ipc.updaterQuitAndInstall())
             .catch(() => {});
         }
         break;
@@ -853,8 +854,8 @@ const updateProgress = ref<number>(0);
 const updateProgressVisible = ref<boolean>(false);
 
 onMounted(async () => {
-  if (!appVersionRef.value && (window as any).electronAPI?.getAppVersion) {
-    try { appVersionRef.value = await (window as any).electronAPI.getAppVersion(); } catch {}
+  if (!appVersionRef.value) {
+    try { appVersionRef.value = await ipc.getAppVersion(); } catch {}
   }
   loadSettings();
   // 同步当前语言
