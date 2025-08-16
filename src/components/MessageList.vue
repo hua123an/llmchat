@@ -101,6 +101,20 @@
                       </div>
                     </div>
                   </div>
+                  <div v-if="Array.isArray(message.kbRefs) && message.kbRefs.length" class="citations">
+                    <div class="cite-header">
+                      <span class="cite-icon">📚</span>
+                      <span class="cite-title">知识库参考</span>
+                    </div>
+                    <div class="cite-list">
+                      <div v-for="r in message.kbRefs" :key="r.index" class="cite-item">
+                        <div class="cite-index">{{ r.index }}</div>
+                        <div class="cite-content">
+                          <div class="cite-text" :title="r.text">{{ r.text }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                   <div class="bubble-actions">
                     <MessageActions
                       :message-role="message.role"

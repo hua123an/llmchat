@@ -869,6 +869,7 @@ ${curated}
               const template: string = String(cfg.kbTemplate || '你可以使用以下知识库参考回答用户问题：\n{{refs}}\n请在答案中合理引用这些内容。');
               const sys = template.replace(/\{\{refs\}\}/g, refs);
               (payload.messagesToSend as any).unshift({ role: 'system', content: sys });
+              try { (assistantMessage as any).kbRefs = aggregated.slice(0, topK).map((x, i) => ({ index: i + 1, text: x.text })); } catch {}
             }
           }
         }
