@@ -3,7 +3,7 @@
     <AppSelect
       v-model="currentProvider"
       class="provider-select"
-      :options="store.providers.map(p => ({ label: formatProviderName(p.name), value: p.name, title: formatProviderName(p.name) }))"
+      :options="store.providers.map((p: {name:string;baseUrl:string}) => ({ label: formatProviderName(p.name), value: p.name, title: formatProviderName(p.name) }))"
       :placeholder="t('chat.placeholders.selectProvider')"
       :aria-label="t('chat.placeholders.selectProvider')"
       @change="store.fetchModels"
@@ -12,7 +12,7 @@
       v-model="currentModel"
       class="model-select"
       :disabled="!currentProvider"
-      :options="currentModels.map(m => ({ label: m.name || m.id, value: m.id, title: m.name || m.id }))"
+      :options="currentModels.map((m: any) => ({ label: m.name || m.id, value: m.id, title: m.name || m.id }))"
       :placeholder="t('chat.placeholders.selectModel')"
       :aria-label="t('chat.placeholders.selectModel')"
     />
@@ -22,6 +22,7 @@
     </div>
     <el-input v-model="currentSystemPrompt" :placeholder="t('chat.placeholders.systemPrompt')" class="system-prompt-input" :aria-label="t('chat.placeholders.systemPrompt')" />
     <ThemeToggle />
+    <el-button size="small" @click="goKnowledge" title="知识库">📚 知识库</el-button>
     <el-button size="small" @click="autoRoute" class="route-btn" :aria-label="t('chat.autoRoute')">{{ t('chat.autoRoute') }}</el-button>
   </div>
   
@@ -29,6 +30,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useChatStore } from '../store/chat';
 import ThemeToggle from './ThemeToggle.vue';
@@ -37,6 +39,7 @@ import { pickRoute } from '../services/router/modelRouter';
 // A/B 测试功能已移除
 
 const store = useChatStore();
+const router = useRouter();
 const { t } = useI18n();
 
 // 本地化显示 Provider 名称
@@ -88,6 +91,10 @@ const autoRoute = () => {
     store.currentTab.provider = route.provider;
     if (route.model) store.currentTab.model = route.model;
   }
+};
+
+const goKnowledge = () => {
+  try { router.push({ path: '/knowledge' }); } catch { window.location.hash = '#/knowledge'; }
 };
 
 // A/B 已移除
