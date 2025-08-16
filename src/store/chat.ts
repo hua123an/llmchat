@@ -847,17 +847,25 @@ ${curated}
         const raw = localStorage.getItem('appSettings');
         const cfg = raw ? JSON.parse(raw) : {};
         if (cfg.enableKBRetrieval) {
-          const { listAllDocs, getDocChunks, vectorSearch } = await import('../services/rag');
+          const { listAllDocs, vectorSearch } = await import('../services/rag');
           const docs = await listAllDocs();
-          if (docs.length > 0) {
-            const firstDoc = docs[0];
+          const chosenIds: string[] = Array.isArray(cfg.kbDocIds) && cfg.kbDocIds.length ? cfg.kbDocIds : (docs[0] ? [docs[0].id] : []);
+          if (chosenIds.length > 0) {
             // 使用阿里云生成查询向量
             const vecs: number[][] = await (window as any).electronAPI.embedTexts('aliyun', [userMessage.content || ''], { model: 'text-embedding-v1' });
             const qv = (vecs && vecs[0]) || [];
             const topK = Math.max(1, Math.min(10, Number(cfg.kbTopK || 4)));
-            const top = await vectorSearch(firstDoc.id, qv, topK);
-            if (top && top.length > 0) {
-              const refs = top.map((x, i) => `［R${i+1}］${x.chunk.text}`).join('\n');
+
+            const aggregated: Array<{ text: string }> = [];
+            for (const id of chosenIds) {
+              try {
+                const top = await vectorSearch(id, qv, topK);
+                for (const x of top) aggregated.push({ text: x.chunk.text });
+              } catch {}
+            }
+
+            if (aggregated.length > 0) {
+              const refs = aggregated.slice(0, topK).map((x, i) => `［R${i + 1}］${x.text}`).join('\n');
               const template: string = String(cfg.kbTemplate || '你可以使用以下知识库参考回答用户问题：\n{{refs}}\n请在答案中合理引用这些内容。');
               const sys = template.replace(/\{\{refs\}\}/g, refs);
               (payload.messagesToSend as any).unshift({ role: 'system', content: sys });
