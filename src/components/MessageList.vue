@@ -113,6 +113,8 @@
                           <div class="cite-text" :title="r.text">{{ r.text }}</div>
                           <div style="margin-top:4px; display:flex; gap:6px">
                             <button class="preview-btn" @click.prevent="copyKBRef(r.text)">复制</button>
+                            <button class="preview-btn" @click.prevent="addRefToInput(r.text)">添加到提示</button>
+                            <button class="preview-btn" @click.prevent="locateKBRef(r)">定位</button>
                           </div>
                         </div>
                       </div>
@@ -250,6 +252,24 @@ const copyKBRef = async (text: string) => {
   } catch {
     (window as any).ElMessage?.error?.('复制失败');
   }
+};
+
+const addRefToInput = (text: string) => {
+  try {
+    const current = store.userInput || '';
+    store.userInput = current ? `${current}\n${text}` : text;
+    (window as any).ElMessage?.success?.('已添加到输入框');
+  } catch {}
+};
+
+const locateKBRef = (r: any) => {
+  try {
+    if (r?.docId && r?.chunkId) {
+      localStorage.setItem('kbLocate', JSON.stringify({ docId: r.docId, chunkId: r.chunkId, ts: Date.now() }));
+    }
+  } catch {}
+  // 简单跳转到知识库页，实际定位由知识库页后续读取 kbLocate 实现
+  try { window.location.hash = '#/knowledge'; } catch {}
 };
 
 // TanStack Mutation 状态

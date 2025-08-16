@@ -222,6 +222,21 @@ const searchByVector = async () => {
 };
 
 onMounted(refresh);
+
+// 首屏若存在定位锚点，滚动到对应分块（后续可加高亮）
+onMounted(async () => {
+  try {
+    const raw = localStorage.getItem('kbLocate');
+    if (!raw) return;
+    const anchor = JSON.parse(raw);
+    localStorage.removeItem('kbLocate');
+    if (anchor?.docId) {
+      lastDocId = anchor.docId;
+      await handleSearch();
+      // 结果中无直接 DOM 分块，先打开结果弹窗供用户查看
+    }
+  } catch {}
+});
 </script>
 
 <style scoped>
