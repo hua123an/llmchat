@@ -831,7 +831,8 @@ onMounted(async () => {
   
   // 监听来自托盘/全局快捷键的截图请求（按设置开关生效）
   try {
-    window.electronAPI.onCaptureRequest(async () => {
+    const { onCaptureRequest, onOpenSettings } = await import('../modules/system/ipc');
+    onCaptureRequest?.(async () => {
       // 全能按钮方案：收到全局截图请求时，直接弹出文件选择（只允许图片）
       if (!fileInputRef.value) return;
       const originalAccept = fileInputRef.value.accept;
@@ -840,7 +841,7 @@ onMounted(async () => {
       setTimeout(() => { if (fileInputRef.value) fileInputRef.value.accept = originalAccept; }, 0);
     });
     // 打开设置快捷键（来自主进程 globalShortcut）
-    window.electronAPI?.onOpenSettings?.(() => {
+    onOpenSettings?.(() => {
       // 触发 UI 打开设置对话框
       store.isSettingsOpen = true;
     });

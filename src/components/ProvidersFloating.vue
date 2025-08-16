@@ -67,6 +67,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useChatStore } from '../store/chat';
 import { ElMessage } from 'element-plus';
+import * as ipc from '../modules/system/ipc';
 
 const store = useChatStore();
 const { t } = useI18n();
@@ -92,14 +93,13 @@ const reloadProviders = async () => {
 
 const refreshHasKey = async (p: ProviderItem) => {
   try { 
-    const res = await (window as any).electronAPI.hasProviderKey(p.name); 
+    const res = await ipc.hasProviderKey(p.name); 
     p.__hasKey = !!res?.hasKey; 
     
     // 如果有密钥，获取并显示（用于回显）
     if (p.__hasKey && !p.__keyInput) {
       try {
-        // 调用一个新的 API 来获取 API Key 的前几位和后几位用于显示
-        const keyRes = await (window as any).electronAPI.getProviderKeyPreview?.(p.name);
+        const keyRes = await ipc.getProviderKeyPreview(p.name);
         if (keyRes?.preview) {
           p.__keyInput = keyRes.preview; // 显示类似 "sk-or-v1...abc123" 的格式
           p.__showKey = false; // 默认不显示完整密钥
@@ -115,7 +115,7 @@ const removeProvider = (idx: number) => providerList.value.splice(idx, 1);
 
 const saveProviders = async () => {
   const data = providerList.value.map(({ name, baseUrl }) => ({ name: name.trim(), baseUrl: baseUrl.trim() })).filter(p => p.name && p.baseUrl);
-  const res = await (window as any).electronAPI.saveProviders(data);
+  const res = await ipc.saveProviders(data);
   if (res?.ok) await store.loadProviders();
 };
 let timer: any = null;
@@ -127,7 +127,7 @@ const saveKey = async (p: ProviderItem) => {
   }
   
   try {
-    const r = await (window as any).electronAPI.setProviderKey(p.name, p.__keyInput);
+    const r = await ipc.setProviderKey(p.name, p.__keyInput);
     
     if (r?.ok) { 
       await refreshHasKey(p); // 重新刷新状态，会自动显示预览
@@ -143,7 +143,7 @@ const saveKey = async (p: ProviderItem) => {
 const removeKey = async (p: ProviderItem) => {
   if (!p.name) return;
   try {
-    const r = await (window as any).electronAPI.removeProviderKey(p.name);
+    const r = await ipc.removeProviderKey(p.name);
     if (r?.ok) {
       p.__hasKey = false;
       p.__keyInput = '';
@@ -177,7 +177,7 @@ const handleKeyInputFocus = (p: ProviderItem) => {
   }
 };
 
-const testProvider = async (p: ProviderItem) => { if (!p.name) return; await (window as any).electronAPI.testProvider(p.name); };
+const testProvider = async (p: ProviderItem) => { if (!p.name) return; await ipc.testProvider(p.name); };
 
 // 刷新Ollama模型列表
 const refreshOllamaModels = async () => {
@@ -198,7 +198,7 @@ const refreshOllamaModels = async () => {
     const baseUrl = ollamaProvider?.baseUrl || 'http://localhost:11434';
     
     console.log('🦙 正在刷新Ollama模型列表...');
-    const result = await (window as any).electronAPI?.refreshOllamaModels?.(baseUrl);
+    const result = await ipc.refreshOllamaModels?.(baseUrl);
     
     if (result?.ok) {
       ElMessage.success(`🦙 ${result.message} (${result.count} 个模型)`);
