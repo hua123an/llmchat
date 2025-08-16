@@ -37,8 +37,8 @@ const notesHtml = computed(() => {
     .replace(/\n/g,'<br/>');
 });
 
-const downloadNow = () => (window as any).electronAPI?.downloadUpdate?.();
-const installNow = () => (window as any).electronAPI?.quitAndInstall?.();
+const downloadNow = () => import('../../modules/system/ipc').then(m => m.updaterDownload());
+const installNow = () => import('../../modules/system/ipc').then(m => m.updaterQuitAndInstall());
 </script>
 
 <style scoped>

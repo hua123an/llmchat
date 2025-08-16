@@ -18,7 +18,8 @@ export async function webSearch(query: string, options?: {
       blacklist: options?.blacklist || []
     };
     
-    const results = await (window as any).electronAPI.webSearch(query, searchOptions);
+    const { webSearch: doSearch } = await import('../../modules/system/ipc');
+    const results = await doSearch(query, searchOptions);
     
     return Array.isArray(results) ? results : [];
   } catch (error) {
@@ -38,7 +39,8 @@ export async function fetchReadable(url: string): Promise<string> {
     // 优先调用主进程提取；若在纯Web环境下无可用API，则回退到 server.js 的后端接口
     let content = '';
     try {
-      content = await (window as any).electronAPI.fetchReadable(url);
+      const { fetchReadable: fetchReadableIPC } = await import('../../modules/system/ipc');
+      content = await fetchReadableIPC(url);
     } catch {}
     if (!content) {
       try {

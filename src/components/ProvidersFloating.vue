@@ -223,8 +223,9 @@ const refreshOllamaModels = async () => {
 onMounted(async () => {
   await reloadProviders();
   // 若存在历史配置文件，提供一次性迁移入口（静默执行）
-  try {
-    const res = await (window as any).electronAPI.migrateLlmconfigNow?.();
+  try { 
+    const { migrateLlmconfigNow } = await import('../modules/system/ipc');
+    const res = await migrateLlmconfigNow?.();
     if (res?.ok && (res.count || 0) > 0) {
       await reloadProviders();
       (window as any).ElMessage?.success?.(`已迁移 ${res.count} 条配置`);

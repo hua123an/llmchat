@@ -7,17 +7,20 @@ import { useQuery, useMutation } from '@tanstack/vue-query';
  */
 export async function listModelsViaOpenAI(providerName: string): Promise<Array<{ id: string; name?: string }>> {
   // We can't import electronAPI here directly, so expose a tiny runtime bridge
-  const providers = await (window as any).electronAPI.getProviders();
+  const { getProviders } = await import('../../modules/system/ipc');
+  const providers = await getProviders();
   const provider = (providers || []).find((p: any) => p.name === providerName);
   if (!provider) return [];
-  const apiKey = await (window as any).electronAPI.hasProviderKey(providerName);
+  const { hasProviderKey } = await import('../../modules/system/ipc');
+  const apiKey = await hasProviderKey(providerName);
   if (!apiKey?.hasKey) return [];
 
   // 删除未使用的客户端创建代码
   // 直接使用 IPC 调用获取模型
   // Since sdk v4 requires apiKey, but we don't want to expose real key to renderer,
   // we instead rely on our existing send-message/get-models paths for auth. For listing, fall back to IPC.
-  const models = await (window as any).electronAPI.getModels(providerName);
+  const { getModels } = await import('../../modules/system/ipc');
+  const models = await getModels(providerName);
   return Array.isArray(models) ? models : [];
 }
 
@@ -25,7 +28,10 @@ export async function listModelsViaOpenAI(providerName: string): Promise<Array<{
 export function useModels(providerName: string) {
   return useQuery({
     queryKey: ['models', providerName],
-    queryFn: () => (window as any).electronAPI.getModels(providerName),
+    queryFn: async () => {
+      const { getModels } = await import('../../modules/system/ipc');
+      return getModels(providerName);
+    },
     staleTime: 1000 * 60,
     refetchOnWindowFocus: false,
   });
@@ -45,7 +51,8 @@ export function useChatMutation() {
       webSearchOptions?: { search_context_size?: 'low' | 'medium' | 'high' };
     }) => {
       const { provider, model, messages, userMessageId, assistantMessageId, attachments, webSearchEnabled, webSearchOptions } = params;
-      await (window as any).electronAPI.sendMessage(
+      const { sendMessage } = await import('../../modules/system/ipc');
+      await sendMessage(
         provider, 
         model, 
         messages, 

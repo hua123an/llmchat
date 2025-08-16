@@ -103,7 +103,7 @@ function run(p: PluginItem) {
         const last = store.currentTab?.messages?.slice().reverse().find(m => m.role === 'assistant');
         if (!last || !last.content) { ElMessage.warning('没有可翻译的内容'); return; }
         // 直接调用本地翻译 API（LibreTranslate 兼容），并将结果作为新的助手消息插入
-        (window as any).electronAPI.translateText(last.content, 'en', 'auto').then((res: any) => {
+        import('../../modules/system/ipc').then(m => m.translateText(last.content, 'en', 'auto')).then((res: any) => {
             if (res?.ok) {
                 const msg = {
                     id: `msg-${Date.now()}`,
@@ -144,7 +144,7 @@ function run(p: PluginItem) {
         const url = prompt('请输入要抓取的网页URL');
         if (!url) return;
         // 交给后端的 fetch-readable IPC（已存在）
-        (window as any).electronAPI.fetchReadable?.(url).then((content: string) => {
+        import('../../modules/system/ipc').then(m => m.fetchReadable(url)).then((content: string) => {
             store.userInput = `请阅读以下网页正文并用要点+引用总结：\n\n${content.slice(0, 8000)}`;
             visible.value = false;
             setTimeout(() => store.sendMessage(false), 0);

@@ -84,11 +84,41 @@ export function updaterOn(handler: (event: any, payload: any) => void): void {
   api().onAutoUpdate?.(handler);
 }
 
-export async function updaterCheck(): Promise<void> { return await api().updaterCheck?.(); }
-export async function updaterDownload(): Promise<void> { return await api().updaterDownload?.(); }
-export async function updaterQuitAndInstall(): Promise<void> { return await api().updaterQuitAndInstall?.(); }
+// Updater helpers (provide both alias names to适配现有 preload 暴露)
+export async function updaterCheck(): Promise<void> { return (await api().updaterCheck?.()) ?? (await api().checkForUpdates?.()); }
+export async function updaterDownload(): Promise<void> { return (await api().updaterDownload?.()) ?? (await api().downloadUpdate?.()); }
+export async function updaterQuitAndInstall(): Promise<void> { return (await api().updaterQuitAndInstall?.()) ?? (await api().quitAndInstall?.()); }
 export async function updaterSetConfig(cfg: { autoCheck?: boolean; autoDownload?: boolean; channel?: string }): Promise<any> {
-  return await api().setAutoUpdateConfig?.(cfg);
+  return (await api().setAutoUpdateConfig?.(cfg)) ?? (await api().updaterSetConfig?.(cfg));
 }
+export async function checkLatestVersion(): Promise<any> { return await api().checkLatestVersion?.(); }
+export async function fetchRemoteUpdateMeta(baseUrl: string): Promise<any> { return await api().fetchRemoteUpdateMeta?.(baseUrl); }
+
+// Providers & keys
+export async function hasProviderKey(providerName: string): Promise<{ ok?: boolean; hasKey: boolean }> {
+  return await api().hasProviderKey?.(providerName);
+}
+export async function getProviderKeyPreview(providerName: string): Promise<{ preview: string | null; message?: string }> {
+  return await api().getProviderKeyPreview?.(providerName);
+}
+export async function setProviderKey(providerName: string, apiKey: string): Promise<{ ok: boolean; message?: string }> {
+  return await api().setProviderKey?.(providerName, apiKey);
+}
+export async function removeProviderKey(providerName: string): Promise<{ ok: boolean; message?: string }> {
+  return await api().removeProviderKey?.(providerName);
+}
+export async function refreshOllamaModels(baseUrl?: string): Promise<any> { return await api().refreshOllamaModels?.(baseUrl); }
+export async function migrateLlmconfigNow(): Promise<any> { return await api().migrateLlmconfigNow?.(); }
+
+// Web utils
+export async function fetchReadable(url: string): Promise<string> { return await api().fetchReadable?.(url); }
+export async function translateText(text: string, target: string, source?: string): Promise<any> {
+  return await api().translateText?.(text, target, source);
+}
+export async function webSearch(query: string, options?: any): Promise<any> { return await api().webSearch?.(query, options); }
+
+// Optional events from main
+export function onCaptureRequest(handler: () => void): void { api().onCaptureRequest?.(handler); }
+export function onOpenSettings(handler: () => void): void { api().onOpenSettings?.(handler); }
 
 
