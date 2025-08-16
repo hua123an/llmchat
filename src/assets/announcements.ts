@@ -11,6 +11,20 @@ export interface ReleaseNote {
 
 export const releaseNotes: ReleaseNote[] = [
   {
+    "version": "2.0.4",
+    "date": "2025-08-16",
+    "items": [
+      {
+        "type": "修复",
+        "points": [
+          "自动更新体验：进一步优化进度事件与前端显示的稳定性，进度条取整与状态切换更平滑",
+          "发布流程：默认使用 notes-file 输出 UTF‑8，避免任何乱码风险",
+          "文档：README 徽章与直链、下载页同步到 v2.0.4"
+        ]
+      }
+    ]
+  },
+  {
     "version": "2.0.3",
     "date": "2025-08-15",
     "items": [
@@ -25,6 +39,13 @@ export const releaseNotes: ReleaseNote[] = [
           "Web Worker 解析，导入不阻塞 UI",
           "切块参数化（chunkSize/overlap/去噪）、高亮与引用回填",
           "本地/远程嵌入向量检索、MMR 排序"
+        ]
+      },
+      {
+        "type": "修复",
+        "points": [
+          "自动更新：设置页“检查更新”新增下载进度条；修复进度事件与浮层显示条件，非强制更新也会展示下载状态",
+          "GitHub Release 乱码：发布说明改用 notes-file（UTF‑8）覆盖，中文不再乱码"
         ]
       }
     ]

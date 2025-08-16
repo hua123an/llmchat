@@ -1,7 +1,7 @@
 import type { Chunk } from './chunker';
 
 const DB_NAME = 'chatllm_rag';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export interface DocMeta { id: string; name: string; createdAt: number; size: number }
 
@@ -14,6 +14,11 @@ function openDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains('chunks')) {
         const store = db.createObjectStore('chunks', { keyPath: 'id' });
         store.createIndex('docId', 'docId', { unique: false });
+      }
+      if (!db.objectStoreNames.contains('vectors')) {
+        const vstore = db.createObjectStore('vectors', { keyPath: 'id' });
+        vstore.createIndex('docId', 'docId', { unique: false });
+        vstore.createIndex('chunkId', 'chunkId', { unique: false });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -81,9 +86,10 @@ export async function getChunksByDoc(docId: string): Promise<Chunk[]> {
 
 export async function clearAll(): Promise<void> {
   const db = await openDB();
-  const tx = db.transaction(['docs', 'chunks'], 'readwrite');
+  const tx = db.transaction(['docs', 'chunks', 'vectors'], 'readwrite');
   tx.objectStore('docs').clear();
   tx.objectStore('chunks').clear();
+  try { tx.objectStore('vectors').clear(); } catch {}
   await new Promise((res, rej) => { tx.oncomplete = () => res(null); tx.onerror = () => rej(tx.error); });
 }
 
@@ -116,6 +122,57 @@ export async function deleteDoc(docId: string): Promise<void> {
       tx.onerror = () => reject(tx.error);
     });
   }
+  // 删除对应的向量
+  try {
+    const vtx = db.transaction(['vectors']);
+    const vidx = vtx.objectStore('vectors').index('docId').getAll(docId);
+    const vids: string[] = await new Promise((resolve) => {
+      vidx.onsuccess = () => resolve(((vidx.result as any[]) || []).map((v: any) => v.id));
+      vidx.onerror = () => resolve([]);
+    });
+    for (let i = 0; i < vids.length; i += 200) {
+      const slice = vids.slice(i, i + 200);
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(['vectors'], 'readwrite');
+        const store = tx.objectStore('vectors');
+        for (const id of slice) store.delete(id);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+  } catch {}
 }
 
+
+// ===== Vectors API =====
+export interface VectorRow { id: string; docId: string; chunkId: string; vector: number[] }
+
+export async function putVectors(rows: VectorRow[], batchSize = 200): Promise<void> {
+  if (!rows || rows.length === 0) return;
+  const db = await openDB();
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const slice = rows.slice(i, i + batchSize);
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(['vectors'], 'readwrite');
+      const store = tx.objectStore('vectors');
+      for (const r of slice) store.put(r as any);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+}
+
+export async function getVectorsByDoc(docId: string): Promise<VectorRow[]> {
+  const db = await openDB();
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(['vectors']);
+      const idx = tx.objectStore('vectors').index('docId').getAll(docId);
+      idx.onsuccess = () => resolve(((idx.result as any[]) || []) as VectorRow[]);
+      idx.onerror = () => resolve([]);
+    } catch {
+      resolve([]);
+    }
+  });
+}
 
