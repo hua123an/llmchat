@@ -11,6 +11,58 @@ export interface ReleaseNote {
 
 export const releaseNotes: ReleaseNote[] = [
   {
+    "version": "2.2.0",
+    "date": "2025-08-17",
+    "items": [
+      {
+        "type": "新增",
+        "points": [
+          "新功能描述",
+          "其他改进"
+        ]
+      },
+      {
+        "type": "改进",
+        "points": [
+          "性能优化",
+          "用户体验改进"
+        ]
+      },
+      {
+        "type": "修复",
+        "points": [
+          "修复的问题"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "2.1.0",
+    "date": "2025-08-17",
+    "items": [
+      {
+        "type": "新增",
+        "points": [
+          "新功能描述",
+          "其他改进"
+        ]
+      },
+      {
+        "type": "改进",
+        "points": [
+          "性能优化",
+          "用户体验改进"
+        ]
+      },
+      {
+        "type": "修复",
+        "points": [
+          "修复的问题"
+        ]
+      }
+    ]
+  },
+  {
     "version": "2.0.5",
     "date": "2025-01-27",
     "items": []

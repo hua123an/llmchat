@@ -1,7 +1,7 @@
 {
   "name": "chatllm",
   "productName": "ChatLLM",
-  "version": "2.0.5",
+  "version": "2.2.0",
   "description": "一个强大的多模型AI聊天应用，支持知识库、联网搜索等功能",
   "author": {
     "name": "ChatLLM Team",
