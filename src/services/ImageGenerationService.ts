@@ -51,6 +51,39 @@ export interface ImageProvider {
 
 export class ImageGenerationService {
   private static providers: ImageProvider[] = [
+    // 胜算云作为首选服务商
+    {
+      name: 'shengsuanyun',
+      displayName: '胜算云',
+      description: '胜算云AI图像生成服务，支持多种模型',
+      baseUrl: 'https://router.shengsuanyun.com',
+      supportedSizes: ['256x256', '512x512', '1024x1024', '1792x1024', '1024x1792'],
+      supportedModels: [
+        'stable-diffusion',
+        'dall-e-3',
+        'dall-e-2',
+        'midjourney-style'
+      ],
+      maxImages: 4,
+      pricing: {
+        'stable-diffusion': {
+          '512x512': 0.015,
+          '1024x1024': 0.03,
+          '1792x1024': 0.045,
+          '1024x1792': 0.045
+        },
+        'dall-e-3': {
+          '1024x1024': 0.04,
+          '1792x1024': 0.08,
+          '1024x1792': 0.08
+        },
+        'dall-e-2': {
+          '256x256': 0.016,
+          '512x512': 0.018,
+          '1024x1024': 0.02
+        }
+      }
+    },
     // 阿里云作为首选服务商
     {
       name: 'aliyun',
@@ -168,21 +201,55 @@ export class ImageGenerationService {
   /**
    * 检查服务商是否已配置并可用
    */
-  static isProviderConfigured(providerName: string): boolean {
-    const settings = this.getSettings();
-    switch (providerName) {
-      case 'openai':
-        return !!settings.openaiApiKey;
-      case 'stability':
-        return !!settings.stabilityApiKey;
-      case 'midjourney':
-        return !!settings.midjourneyApiKey;
-      case 'local':
-        return !!settings.localSdUrl;
-      case 'aliyun':
-        return !!settings.aliyunApiKey;
-      default:
-        return false;
+  static async isProviderConfigured(providerName: string): Promise<boolean> {
+    try {
+      console.log(`🔍 检查服务商配置: ${providerName}`);
+      
+      if (typeof window !== 'undefined' && (window as any).electronAPI) {
+        // 在Electron环境中，动态检查API密钥
+        console.log(`📱 Electron环境 - 检查${providerName}的API密钥`);
+        const apiKey = await this.getApiKey(providerName);
+        const isConfigured = !!apiKey;
+        console.log(`🔑 ${providerName} API密钥检查结果: ${isConfigured ? '已配置' : '未配置'}`);
+        if (apiKey) {
+          console.log(`🔑 ${providerName} API密钥预览: ${apiKey.substring(0, 10)}...`);
+        }
+        return isConfigured;
+      } else {
+        // 在非Electron环境中，使用localStorage
+        console.log(`🌐 非Electron环境 - 从localStorage检查${providerName}`);
+        const settings = this.getSettings();
+        let isConfigured = false;
+        
+        switch (providerName) {
+          case 'shengsuanyun':
+            isConfigured = !!settings.shengsuanyunApiKey;
+            break;
+          case 'openai':
+            isConfigured = !!settings.openaiApiKey;
+            break;
+          case 'stability':
+            isConfigured = !!settings.stabilityApiKey;
+            break;
+          case 'midjourney':
+            isConfigured = !!settings.midjourneyApiKey;
+            break;
+          case 'local':
+            isConfigured = !!settings.localSdUrl;
+            break;
+          case 'aliyun':
+            isConfigured = !!settings.aliyunApiKey;
+            break;
+          default:
+            isConfigured = false;
+        }
+        
+        console.log(`💾 ${providerName} localStorage检查结果: ${isConfigured ? '已配置' : '未配置'}`);
+        return isConfigured;
+      }
+    } catch (error) {
+      console.error(`❌ 检查${providerName}配置失败:`, error);
+      return false;
     }
   }
 
@@ -191,7 +258,7 @@ export class ImageGenerationService {
    */
   static async generateImage(request: ImageGenerationRequest, provider: string): Promise<ImageGenerationResponse> {
     // 检查服务商是否已配置
-    if (!this.isProviderConfigured(provider)) {
+    if (!await this.isProviderConfigured(provider)) {
       return {
         success: false,
         error: `请先配置 ${provider} 的API密钥或服务地址`
@@ -204,21 +271,49 @@ export class ImageGenerationService {
         throw new Error(`Unknown provider: ${provider}`);
       }
 
-      const settings = this.getSettings();
+      // 动态获取API密钥
+      let apiKey = '';
+      if (typeof window !== 'undefined' && (window as any).electronAPI) {
+        apiKey = await this.getApiKey(provider);
+      } else {
+        const settings = this.getSettings();
+        switch (provider) {
+          case 'shengsuanyun':
+            apiKey = settings.shengsuanyunApiKey;
+            break;
+          case 'openai':
+            apiKey = settings.openaiApiKey;
+            break;
+          case 'stability':
+            apiKey = settings.stabilityApiKey;
+            break;
+          case 'midjourney':
+            apiKey = settings.midjourneyApiKey;
+            break;
+          case 'aliyun':
+            apiKey = settings.aliyunApiKey;
+            break;
+          default:
+            apiKey = '';
+        }
+      }
       
       switch (provider) {
+        case 'shengsuanyun':
+          return await this.generateWithShengsuanyun(request, apiKey);
         case 'openai':
-          return await this.generateWithOpenAI(request, settings.openaiApiKey);
+          return await this.generateWithOpenAI(request, apiKey);
         case 'gemini':
-          return await this.generateWithGemini(request, (settings as any).geminiApiKey || '');
+          return await this.generateWithGemini(request, apiKey);
         case 'stability':
-          return await this.generateWithStability(request, settings.stabilityApiKey);
+          return await this.generateWithStability(request, apiKey);
         case 'midjourney':
-          return await this.generateWithMidjourney(request, settings.midjourneyApiKey);
+          return await this.generateWithMidjourney(request, apiKey);
         case 'local':
+          const settings = this.getSettings();
           return await this.generateWithLocalSD(request, settings.localSdUrl);
         case 'aliyun':
-          return await this.generateWithAliyun(request, settings.aliyunApiKey);
+          return await this.generateWithAliyun(request, apiKey);
         default:
           throw new Error(`Provider ${provider} not implemented`);
       }
@@ -228,6 +323,60 @@ export class ImageGenerationService {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
       };
+    }
+  }
+
+  /**
+   * 胜算云图像生成
+   */
+  private static async generateWithShengsuanyun(request: ImageGenerationRequest, apiKey: string): Promise<ImageGenerationResponse> {
+    if (!apiKey) {
+      throw new Error('胜算云API密钥未配置');
+    }
+
+    // 检查是否在Electron环境中
+    if (typeof window !== 'undefined') {
+      try {
+        console.log('通过Electron主进程调用胜算云API');
+        
+        // 确保传递的request对象是完全可序列化的
+        const cleanRequest = {
+          prompt: String(request.prompt || ''),
+          model: String(request.model || 'stable-diffusion'),
+          size: String(request.size || '1024x1024'),
+          n: Number(request.n || 1)
+        };
+        
+        const { generateImage } = await import('../modules/system/ipc');
+        const result = await generateImage(cleanRequest, 'shengsuanyun', apiKey);
+        
+        if (!result.success) {
+          throw new Error(result.error || '图像生成失败');
+        }
+        
+        // 安全处理返回结果，确保数据完整性
+        const images = Array.isArray(result.images) ? result.images.map((image: any) => ({
+          url: typeof image.url === 'string' ? image.url : '',
+          revised_prompt: typeof image.revised_prompt === 'string' ? image.revised_prompt : request.prompt
+        })) : [];
+
+        return {
+          success: true,
+          images: images,
+          usage: result.usage && typeof result.usage === 'object' ? {
+            provider: String(result.usage.provider || '胜算云'),
+            cost: Number(result.usage.cost || this.calculateCost('shengsuanyun', request))
+          } : {
+            provider: '胜算云',
+            cost: this.calculateCost('shengsuanyun', request)
+          }
+        };
+      } catch (error) {
+        console.error('Electron图像生成失败:', error);
+        throw error;
+      }
+    } else {
+      throw new Error('胜算云图像生成需要在Electron环境中运行，以避免跨域限制。请在桌面版中使用此功能。');
     }
   }
 
@@ -528,27 +677,30 @@ export class ImageGenerationService {
    */
   private static getSettings() {
     try {
+      // 在非Electron环境中，使用localStorage
       const settings = JSON.parse(localStorage.getItem('imageGenerationSettings') || '{}');
       return {
+        shengsuanyunApiKey: settings.shengsuanyunApiKey || '',
         openaiApiKey: settings.openaiApiKey || '',
         stabilityApiKey: settings.stabilityApiKey || '',
         midjourneyApiKey: settings.midjourneyApiKey || '',
         localSdUrl: settings.localSdUrl || 'http://127.0.0.1:7860',
         aliyunApiKey: settings.aliyunApiKey || '',
-        defaultProvider: settings.defaultProvider || 'openai',
-        defaultModel: settings.defaultModel || 'dall-e-3',
+        defaultProvider: settings.defaultProvider || 'shengsuanyun',
+        defaultModel: settings.defaultModel || 'stable-diffusion',
         defaultSize: settings.defaultSize || '1024x1024',
         defaultQuality: settings.defaultQuality || 'standard'
       };
     } catch {
       return {
+        shengsuanyunApiKey: '',
         openaiApiKey: '',
         stabilityApiKey: '',
         midjourneyApiKey: '',
         localSdUrl: 'http://127.0.0.1:7860',
         aliyunApiKey: '',
-        defaultProvider: 'openai',
-        defaultModel: 'dall-e-3',
+        defaultProvider: 'shengsuanyun',
+        defaultModel: 'stable-diffusion',
         defaultSize: '1024x1024',
         defaultQuality: 'standard'
       };
@@ -556,11 +708,58 @@ export class ImageGenerationService {
   }
 
   /**
+   * 动态获取API密钥（在Electron环境中）
+   */
+  private static async getApiKey(provider: string): Promise<string> {
+    try {
+      console.log(`🔑 开始获取${provider}的API密钥`);
+      
+      if (typeof window !== 'undefined' && (window as any).electronAPI) {
+        console.log(`📱 通过electronAPI.getApiKey获取${provider}密钥`);
+        // 直接通过electronAPI获取API密钥
+        const apiKey = await (window as any).electronAPI.getApiKey(provider);
+        console.log(`🔑 ${provider} API密钥获取结果: ${apiKey ? '成功获取' : '未找到'}`);
+        return apiKey || '';
+      } else {
+        console.log(`❌ electronAPI不可用，无法获取${provider}密钥`);
+        return '';
+      }
+    } catch (error) {
+      console.error(`❌ 获取${provider} API密钥失败:`, error);
+      return '';
+    }
+  }
+
+  /**
    * 保存设置
    */
-  static saveSettings(settings: any) {
+  static async saveSettings(settings: any) {
     try {
-      localStorage.setItem('imageGenerationSettings', JSON.stringify(settings));
+      // 在Electron环境中，API密钥需要通过IPC保存到secureStorage
+      if (typeof window !== 'undefined' && (window as any).electronAPI) {
+        // 保存API密钥到安全存储
+        if (settings.shengsuanyunApiKey) {
+          try {
+            await (window as any).electronAPI.setProviderKey('shengsuanyun', settings.shengsuanyunApiKey);
+            console.log('胜算云API密钥已保存到安全存储');
+          } catch (error) {
+            console.error('保存胜算云API密钥失败:', error);
+          }
+        }
+        
+        // 其他设置保存到localStorage（排除敏感的API密钥）
+        const nonSensitiveSettings = { ...settings };
+        delete nonSensitiveSettings.shengsuanyunApiKey;
+        delete nonSensitiveSettings.openaiApiKey;
+        delete nonSensitiveSettings.stabilityApiKey;
+        delete nonSensitiveSettings.midjourneyApiKey;
+        delete nonSensitiveSettings.aliyunApiKey;
+        
+        localStorage.setItem('imageGenerationSettings', JSON.stringify(nonSensitiveSettings));
+      } else {
+        // 在非Electron环境中，直接保存到localStorage
+        localStorage.setItem('imageGenerationSettings', JSON.stringify(settings));
+      }
     } catch (error) {
       console.error('Failed to save image generation settings:', error);
     }

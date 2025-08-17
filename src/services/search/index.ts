@@ -18,4 +18,7 @@ export function searchMessages(query: string, scope: SearchScope = 'current'): A
   return results;
 }
 
+// 导出胜算云搜索服务
+export * from './shengsuanyun';
+
 

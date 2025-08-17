@@ -18,6 +18,11 @@ export interface ElectronAPI {
   fetchReadable: (url: string) => Promise<string>;
   translateText: (text: string, target: string, source?: string) => Promise<{ ok: boolean; text?: string; message?: string }>;
   
+  // 胜算云搜索 API
+  shengsuanyunWebSearch: (query: string, options?: any) => Promise<any[]>;
+  shengsuanyunThinkingSearch: (query: string, searchResults: any[], options?: any) => Promise<{ thinkingProcess: string; finalAnswer: string }>;
+  shengsuanyunSearchSuggestions: (partialQuery: string, maxSuggestions?: number) => Promise<string[]>;
+  
   // 图像生成 API
   generateImage: (request: any, providerName: string, apiKey: string) => Promise<{ success: boolean; images?: any[]; error?: string; usage?: any }>;
   // Devtools
@@ -31,6 +36,7 @@ export interface ElectronAPI {
   removeProviderKey: (providerName: string) => Promise<{ ok: boolean; message?: string }>;
   hasProviderKey: (providerName: string) => Promise<{ hasKey: boolean }>;
   getProviderKeyPreview: (providerName: string) => Promise<{ preview: string | null; message?: string }>;
+  getApiKey: (providerName: string) => Promise<string>;
   testProvider: (providerName: string) => Promise<{ ok: boolean; message?: string }>;
   migrateLlmconfigNow: () => Promise<{ ok: boolean; count?: number; message?: string }>;
   // Updater
@@ -66,6 +72,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   fetchReadable: (url: string) => ipcRenderer.invoke('fetch-readable', url),
   translateText: (text: string, target: string, source?: string) => ipcRenderer.invoke('translate-text', text, target, source),
   
+  // 胜算云搜索
+  shengsuanyunWebSearch: (query: string, options?: any) => ipcRenderer.invoke('shengsuanyun-web-search', query, options),
+  shengsuanyunThinkingSearch: (query: string, searchResults: any[], options?: any) => ipcRenderer.invoke('shengsuanyun-thinking-search', query, searchResults, options),
+  shengsuanyunSearchSuggestions: (partialQuery: string, maxSuggestions?: number) => ipcRenderer.invoke('shengsuanyun-search-suggestions', partialQuery, maxSuggestions),
+  
   // 图像生成
   generateImage: (request: any, providerName: string, apiKey: string) => ipcRenderer.invoke('generate-image', request, providerName, apiKey),
   toggleDevtools: () => ipcRenderer.invoke('devtools-toggle'),
@@ -79,6 +90,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   removeProviderKey: (providerName: string) => ipcRenderer.invoke('remove-provider-key', providerName),
   hasProviderKey: (providerName: string) => ipcRenderer.invoke('has-provider-key', providerName),
   getProviderKeyPreview: (providerName: string) => ipcRenderer.invoke('get-provider-key-preview', providerName),
+  getApiKey: (providerName: string) => ipcRenderer.invoke('get-api-key', providerName),
   testProvider: (providerName: string) => ipcRenderer.invoke('test-provider', providerName),
   migrateLlmconfigNow: () => ipcRenderer.invoke('migrate-llmconfig-now'),
   // Updater

@@ -2,7 +2,7 @@
 // 便于后续替换/降级为 Web 环境实现
 
 type ProviderInfo = { name: string; baseUrl: string };
-type ModelInfo = { id: string; name?: string };
+export type ModelInfo = { id: string; name?: string };
 
 function api(): any {
   const w = (typeof window !== 'undefined' ? (window as any) : undefined);
@@ -98,6 +98,30 @@ export async function fetchRemoteUpdateMeta(baseUrl: string): Promise<any> { ret
 export async function hasProviderKey(providerName: string): Promise<{ ok?: boolean; hasKey: boolean }> {
   return await api().hasProviderKey?.(providerName);
 }
+
+/**
+ * 获取指定服务商的API密钥
+ */
+export async function getApiKey(providerName: string): Promise<string> {
+  try {
+    if (typeof window !== 'undefined' && (window as any).electronAPI) {
+      // 在Electron环境中，通过IPC获取API密钥
+      const result = await api().getApiKey?.(providerName);
+      return result || '';
+    }
+    return '';
+  } catch (error) {
+    console.error(`获取${providerName} API密钥失败:`, error);
+    return '';
+  }
+}
+
+/**
+ * 设置指定服务商的API密钥
+ */
+export async function setApiKey(providerName: string, apiKey: string): Promise<{ ok: boolean; message?: string }> {
+  return await setProviderKey(providerName, apiKey);
+}
 export async function getProviderKeyPreview(providerName: string): Promise<{ preview: string | null; message?: string }> {
   return await api().getProviderKeyPreview?.(providerName);
 }
@@ -116,6 +140,29 @@ export async function translateText(text: string, target: string, source?: strin
   return await api().translateText?.(text, target, source);
 }
 export async function webSearch(query: string, options?: any): Promise<any> { return await api().webSearch?.(query, options); }
+
+// 胜算云搜索
+export async function shengsuanyunWebSearch(query: string, options?: any): Promise<any[]> {
+  return await api().shengsuanyunWebSearch?.(query, options) || [];
+}
+
+export async function shengsuanyunThinkingSearch(
+  query: string, 
+  searchResults: any[], 
+  options?: any
+): Promise<{ thinkingProcess: string; finalAnswer: string }> {
+  return await api().shengsuanyunThinkingSearch?.(query, searchResults, options) || {
+    thinkingProcess: '',
+    finalAnswer: '思考模式搜索失败'
+  };
+}
+
+export async function shengsuanyunSearchSuggestions(
+  partialQuery: string, 
+  maxSuggestions: number = 5
+): Promise<string[]> {
+  return await api().shengsuanyunSearchSuggestions?.(partialQuery, maxSuggestions) || [];
+}
 
 // Optional events from main
 export function onCaptureRequest(handler: () => void): void { api().onCaptureRequest?.(handler); }

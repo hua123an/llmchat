@@ -171,7 +171,67 @@
         <!-- 设置面板 -->
         <div class="settings-panel">
           <el-collapse>
-            <el-collapse-item title="🔧 API设置" name="settings">
+            <!-- 胜算云文生图配置 -->
+            <el-collapse-item title="🎨 胜算云文生图" name="shengsuanyun">
+              <div class="shengsuanyun-config">
+                <div class="config-item">
+                  <label>🔑 API密钥</label>
+                  <el-input 
+                    v-model="shengsuanyunConfig.apiKey" 
+                    type="password"
+                    placeholder="请输入胜算云API密钥"
+                    show-password
+                    @input="saveShengsuanyunConfig"
+                  />
+                </div>
+                
+                <div class="config-item">
+                  <label>🌐 API地址</label>
+                  <el-input 
+                    v-model="shengsuanyunConfig.baseUrl" 
+                    placeholder="https://router.shengsuanyun.com/api/v1"
+                    @input="saveShengsuanyunConfig"
+                  />
+                </div>
+                
+                <div class="config-status">
+                  <div v-if="shengsuanyunConfig.apiKey" class="status-ok">
+                    ✅ 配置完整，可以使用文生图功能
+                  </div>
+                  <div v-else class="status-error">
+                    ❌ 请配置API密钥以使用文生图功能
+                  </div>
+                  <div class="service-status">
+                    <small>
+                      💡 提示：如遇503错误，系统会自动重试3次。
+                      <br>建议先点击"测试连接"检查服务状态。
+                    </small>
+                  </div>
+                </div>
+                
+                <div style="margin-top: 10px; display: flex; gap: 8px;">
+                  <el-button 
+                    v-if="shengsuanyunConfig.apiKey" 
+                    @click="testShengsuanyunConnection"
+                    :loading="testing"
+                    size="small"
+                    type="primary"
+                  >
+                    🔍 测试连接
+                  </el-button>
+                  <el-button 
+                    @click="showDebugDialog"
+                    size="small"
+                    type="info"
+                  >
+                    🔧 高级调试
+                  </el-button>
+                </div>
+              </div>
+            </el-collapse-item>
+            
+            <!-- 其他API设置 -->
+            <el-collapse-item title="🔧 其他API设置" name="settings">
               <el-form size="small" label-width="100px">
                 <el-form-item label="OpenAI Key">
                   <el-input 
@@ -297,6 +357,17 @@
       </div>
     </div>
 
+    <!-- 调试对话框 -->
+    <el-dialog 
+      v-model="debugDialogVisible" 
+      title="🔧 胜算云API调试" 
+      width="80%" 
+      max-width="900px"
+      :close-on-click-modal="false"
+    >
+      <ShengsuanyunDebug />
+    </el-dialog>
+
     <!-- 图像预览对话框 -->
     <el-dialog v-model="previewVisible" title="图像预览" width="70%">
       <div class="preview-container" v-if="currentPreviewImage">
@@ -313,6 +384,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
+import ShengsuanyunDebug from '../debug/ShengsuanyunDebug.vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { ImageGenerationService, type ImageGenerationRequest } from '../../services/ImageGenerationService';
 import { useChatStore } from '../../store/chat';
@@ -329,8 +401,8 @@ const visible = computed({
 // 表单数据
 const form = ref<ImageGenerationRequest & { provider: string }>({
   prompt: '',
-  provider: 'aliyun', // 默认使用阿里云
-  model: 'stable-diffusion-3.5-large',
+  provider: 'shengsuanyun', // 默认使用胜算云
+  model: 'stable-diffusion',
   size: '1024x1024',
   quality: 'standard',
   style: 'natural',
@@ -348,8 +420,16 @@ const settings = ref({
   aliyunApiKey: ''
 });
 
+// 胜算云独立配置
+const shengsuanyunConfig = ref({
+  apiKey: '',
+  baseUrl: 'https://router.shengsuanyun.com/api/v1'
+});
+
 // 状态
 const generating = ref(false);
+const testing = ref(false);
+const debugDialogVisible = ref(false);
 const progressPercent = ref(0);
 const progressText = ref('正在与模型建立任务...');
 let cancelRequested = false;
@@ -368,8 +448,30 @@ const currentProvider = computed(() => {
 });
 
 // 检查服务商是否已配置
+const providerConfigStatus = ref<Record<string, boolean>>({});
+
 const isProviderConfigured = (providerName: string) => {
-  return ImageGenerationService.isProviderConfigured(providerName);
+  return providerConfigStatus.value[providerName] || false;
+};
+
+// 更新服务商配置状态
+const updateProviderStatus = async () => {
+  try {
+    console.log('🔄 开始更新服务商配置状态');
+    for (const provider of availableProviders.value) {
+      try {
+        const isConfigured = await ImageGenerationService.isProviderConfigured(provider.name);
+        providerConfigStatus.value[provider.name] = isConfigured;
+        console.log(`📊 ${provider.name}: ${isConfigured ? '已配置' : '未配置'}`);
+      } catch (error) {
+        console.error(`❌ 检查${provider.name}配置失败:`, error);
+        providerConfigStatus.value[provider.name] = false;
+      }
+    }
+    console.log('✅ 服务商配置状态更新完成');
+  } catch (error) {
+    console.error('❌ 更新服务商配置状态失败:', error);
+  }
 };
 
 // 是否可以生成
@@ -401,8 +503,9 @@ const examplePrompts = [
 ];
 
 // 生命周期
-onMounted(() => {
-  loadSettings();
+onMounted(async () => {
+  await loadSettings();
+  await updateProviderStatus(); // 更新配置状态
   if (availableProviders.value.length > 0) {
     form.value.provider = availableProviders.value[0].name;
     onProviderChange();
@@ -410,23 +513,107 @@ onMounted(() => {
 });
 
 // 方法
-const loadSettings = () => {
+const loadSettings = async () => {
   try {
+    // 加载通用设置
     const saved = localStorage.getItem('imageGenerationSettings');
     if (saved) {
       Object.assign(settings.value, JSON.parse(saved));
+    }
+    
+    // 加载胜算云独立配置
+    const shengsuanyunSaved = localStorage.getItem('shengsuanyun_image_config');
+    if (shengsuanyunSaved) {
+      Object.assign(shengsuanyunConfig.value, JSON.parse(shengsuanyunSaved));
+      console.log('✅ 加载胜算云配置:', shengsuanyunConfig.value);
     }
   } catch (error) {
     console.error('Failed to load settings:', error);
   }
 };
 
-const saveSettings = () => {
-  ImageGenerationService.saveSettings(settings.value);
-  // 重新检查可用服务商
-  if (availableProviders.value.length === 0) {
+const saveSettings = async () => {
+  await ImageGenerationService.saveSettings(settings.value);
+  // 重新检查可用服务商配置状态
+  await updateProviderStatus();
+  if (Object.values(providerConfigStatus.value).every(configured => !configured)) {
     ElMessage.warning('请先配置至少一个API密钥');
+  } else {
+    ElMessage.success('设置已保存');
   }
+};
+
+// 保存胜算云配置
+const saveShengsuanyunConfig = () => {
+  try {
+    localStorage.setItem('shengsuanyun_image_config', JSON.stringify(shengsuanyunConfig.value));
+    console.log('✅ 胜算云配置已保存:', shengsuanyunConfig.value);
+  } catch (error) {
+    console.error('❌ 保存胜算云配置失败:', error);
+  }
+};
+
+// 测试胜算云连接
+const testShengsuanyunConnection = async () => {
+  if (!shengsuanyunConfig.value.apiKey) {
+    ElMessage.error('请先配置API密钥');
+    return;
+  }
+  
+  testing.value = true;
+  try {
+    console.log('🔍 开始测试胜算云连接...');
+    console.log('API Key:', shengsuanyunConfig.value.apiKey.substring(0, 10) + '...');
+    console.log('Base URL:', shengsuanyunConfig.value.baseUrl);
+    
+    // 首先测试基础连接
+    const testUrl = `${shengsuanyunConfig.value.baseUrl}/models`;
+    console.log('测试URL:', testUrl);
+    
+    const response = await fetch(testUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${shengsuanyunConfig.value.apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    console.log('响应状态:', response.status);
+    console.log('响应头:', Object.fromEntries(response.headers.entries()));
+    
+    const responseText = await response.text();
+    console.log('响应内容:', responseText);
+    
+    if (response.ok) {
+      ElMessage.success('🎉 连接测试成功！API密钥有效');
+    } else if (response.status === 503) {
+      ElMessage.error('⚠️ 服务暂时不可用(503)，请稍后重试或检查API地址');
+    } else if (response.status === 401) {
+      ElMessage.error('🔑 API密钥无效，请检查密钥是否正确');
+    } else if (response.status === 404) {
+      ElMessage.error('📍 API地址可能不正确，请检查baseUrl配置');
+    } else {
+      ElMessage.error(`❌ 连接失败: HTTP ${response.status} - ${responseText}`);
+    }
+  } catch (error) {
+    console.error('❌ 连接测试异常:', error);
+    if (error instanceof Error) {
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        ElMessage.error('🌐 网络连接失败，请检查网络或API地址');
+      } else {
+        ElMessage.error(`连接测试失败: ${error.message}`);
+      }
+    } else {
+      ElMessage.error('连接测试失败: 未知错误');
+    }
+  } finally {
+    testing.value = false;
+  }
+};
+
+// 显示调试对话框
+const showDebugDialog = () => {
+  debugDialogVisible.value = true;
 };
 
 const onProviderChange = () => {
@@ -472,6 +659,12 @@ const generateImage = async () => {
     return;
   }
 
+  // 特殊处理胜算云
+  if (form.value.provider === 'shengsuanyun') {
+    await generateImageWithShengsuanyun();
+    return;
+  }
+
   if (availableProviders.value.length === 0) {
     ElMessage.error('请先配置API密钥');
     return;
@@ -501,6 +694,166 @@ const generateImage = async () => {
   } catch (error) {
     console.error('Image generation failed:', error);
     ElMessage.error(error instanceof Error ? error.message : '生成失败');
+  } finally {
+    progressPercent.value = 100;
+    generating.value = false;
+  }
+};
+
+// 胜算云独立生成逻辑
+const generateImageWithShengsuanyun = async (retryCount = 0) => {
+  if (!shengsuanyunConfig.value.apiKey) {
+    ElMessage.error('请先配置胜算云API密钥');
+    return;
+  }
+
+  generating.value = true;
+  const maxRetries = 3;
+  const retryDelay = (retryCount + 1) * 2000; // 2s, 4s, 6s
+  
+  try {
+    cancelRequested = false;
+    progressPercent.value = 10;
+    progressText.value = '连接胜算云服务...';
+    
+    const requestBody = {
+      prompt: form.value.prompt,
+      model: form.value.model || 'stable-diffusion',
+      n: typeof form.value.n === 'string' ? parseInt(form.value.n) : (form.value.n || 1),
+      size: form.value.size || '1024x1024'
+    };
+    
+    console.log('🎨 胜算云文生图请求:', {
+      url: `${shengsuanyunConfig.value.baseUrl}/images/generations`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${shengsuanyunConfig.value.apiKey.substring(0, 10)}...`
+      },
+      body: requestBody
+    });
+    
+    progressPercent.value = 30;
+    progressText.value = '正在生成图像...';
+    
+    const response = await fetch(`${shengsuanyunConfig.value.baseUrl}/images/generations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${shengsuanyunConfig.value.apiKey}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+    
+    if (cancelRequested) throw new Error('已取消');
+    progressPercent.value = 70;
+    progressText.value = '处理结果中...';
+    
+    console.log('🎨 响应状态:', response.status);
+    console.log('🎨 响应头:', Object.fromEntries(response.headers.entries()));
+    
+    const responseText = await response.text();
+    console.log('🎨 响应内容:', responseText);
+    
+    if (!response.ok) {
+      if (response.status === 503) {
+        // 服务不可用，尝试重试
+        if (retryCount < maxRetries) {
+          progressText.value = `服务暂时不可用，${retryDelay/1000}秒后进行第${retryCount + 1}次重试...`;
+          console.log(`🔄 第${retryCount + 1}次重试，延迟${retryDelay}ms`);
+          
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          
+          if (!cancelRequested) {
+            generating.value = false; // 重置状态
+            return await generateImageWithShengsuanyun(retryCount + 1);
+          }
+        } else {
+          throw new Error('服务持续不可用，已达到最大重试次数。请稍后手动重试或联系客服。');
+        }
+      } else if (response.status === 401) {
+        throw new Error('API密钥无效，请检查密钥是否正确');
+      } else if (response.status === 400) {
+        throw new Error(`请求参数错误: ${responseText}`);
+      } else if (response.status === 429) {
+        // 限流错误也尝试重试
+        if (retryCount < maxRetries) {
+          const throttleDelay = Math.min(retryDelay * 2, 10000); // 最大10秒
+          progressText.value = `请求过于频繁，${throttleDelay/1000}秒后重试...`;
+          console.log(`🔄 限流重试，延迟${throttleDelay}ms`);
+          
+          await new Promise(resolve => setTimeout(resolve, throttleDelay));
+          
+          if (!cancelRequested) {
+            generating.value = false;
+            return await generateImageWithShengsuanyun(retryCount + 1);
+          }
+        } else {
+          throw new Error('请求过于频繁且重试失败，请稍后手动重试');
+        }
+      } else {
+        throw new Error(`API请求失败 (${response.status}): ${responseText}`);
+      }
+    }
+    
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('JSON解析失败:', parseError);
+      throw new Error('服务器响应格式错误');
+    }
+    
+    console.log('🎨 解析后的数据:', data);
+    
+    progressPercent.value = 90;
+    progressText.value = '解析图像数据...';
+    
+    if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+      const images = data.data.map((item: any) => ({
+        url: item.url,
+        revised_prompt: item.revised_prompt || form.value.prompt
+      }));
+      
+      generatedImages.value.unshift(...images);
+      ElMessage.success(`🎉 成功生成 ${images.length} 张图像`);
+    } else if (data.error) {
+      throw new Error(`API错误: ${data.error.message || data.error}`);
+    } else {
+      throw new Error('API返回了空的图像数据或格式不正确');
+    }
+  } catch (error) {
+    console.error('❌ 胜算云图像生成失败:', error);
+    
+    let errorMessage = '生成失败';
+    if (error instanceof Error) {
+      if (error.message.includes('503') || error.message.includes('服务持续不可用')) {
+        errorMessage = error.message;
+        // 显示额外的建议
+        ElMessage.error({
+          message: errorMessage,
+          duration: 8000,
+          showClose: true
+        });
+        
+        // 显示建议信息
+        setTimeout(() => {
+          ElMessage.info({
+            message: '💡 建议：1) 等待5-10分钟后重试 2) 使用其他图像生成服务 3) 查看胜算云官网服务状态',
+            duration: 10000,
+            showClose: true
+          });
+        }, 1000);
+        return; // 不要重复显示错误
+      } else if (error.message.includes('401')) {
+        errorMessage = '🔑 API密钥无效，请检查配置';
+      } else if (error.message.includes('网络')) {
+        errorMessage = '🌐 网络连接失败，请检查网络';
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
+    ElMessage.error(errorMessage);
   } finally {
     progressPercent.value = 100;
     generating.value = false;
@@ -602,6 +955,57 @@ watch(() => form.value.provider, onProviderChange);
 </script>
 
 <style scoped>
+/* 胜算云配置样式 */
+.shengsuanyun-config {
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.config-item {
+  margin-bottom: 16px;
+}
+
+.config-item label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #374151;
+  font-size: 14px;
+}
+
+.config-status {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.status-ok {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #d1fae5;
+}
+
+.status-error {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.service-status {
+  margin-top: 8px;
+  padding: 8px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 4px;
+}
+
+.service-status small {
+  color: #0369a1;
+  line-height: 1.4;
+}
 .image-generation-dialog {
   --panel-border: 1px solid var(--border-light);
 }

@@ -8,7 +8,6 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    AbTestDialog: typeof import('./src/components/ab/AbTestDialog.vue')['default']
     AgentSelector: typeof import('./src/components/AgentSelector.vue')['default']
     AnnouncementFloating: typeof import('./src/components/common/AnnouncementFloating.vue')['default']
     AppSelect: typeof import('./src/components/common/AppSelect.vue')['default']
@@ -17,6 +16,7 @@ declare module 'vue' {
     CodeBlock: typeof import('./src/components/common/CodeBlock.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
     ElButton: typeof import('element-plus/es')['ElButton']
+    ElCard: typeof import('element-plus/es')['ElCard']
     ElCollapse: typeof import('element-plus/es')['ElCollapse']
     ElCollapseItem: typeof import('element-plus/es')['ElCollapseItem']
     ElDatePicker: typeof import('element-plus/es')['ElDatePicker']
@@ -48,7 +48,6 @@ declare module 'vue' {
     ElUpload: typeof import('element-plus/es')['ElUpload']
     HistorySearchDialog: typeof import('./src/components/common/HistorySearchDialog.vue')['default']
     ImageGenerationDialog: typeof import('./src/components/common/ImageGenerationDialog.vue')['default']
-    JSONViewer: typeof import('./src/components/common/JSONViewer.vue')['default']
     KnowledgeFloating: typeof import('./src/components/KnowledgeFloating.vue')['default']
     MessageActions: typeof import('./src/components/common/MessageActions.vue')['default']
     MessageInput: typeof import('./src/components/MessageInput.vue')['default']
@@ -59,6 +58,9 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SettingsDialog: typeof import('./src/components/SettingsDialog.vue')['default']
+    ShengsuanyunConfig: typeof import('./src/components/common/ShengsuanyunConfig.vue')['default']
+    ShengsuanyunDebug: typeof import('./src/components/debug/ShengsuanyunDebug.vue')['default']
+    ShengsuanyunDemo: typeof import('./src/components/common/ShengsuanyunDemo.vue')['default']
     Sidebar: typeof import('./src/components/Sidebar.vue')['default']
     StatsFloating: typeof import('./src/components/StatsFloating.vue')['default']
     ThemeToggle: typeof import('./src/components/ThemeToggle.vue')['default']

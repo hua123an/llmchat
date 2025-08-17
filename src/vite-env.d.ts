@@ -12,11 +12,18 @@ interface ElectronAPI {
   webSearch: (query: string, options?: any) => Promise<any[]>;
   fetchReadable: (url: string) => Promise<string>;
   translateText: (text: string, target: string, source?: string) => Promise<{ ok: boolean; text?: string; message?: string }>;
+  
+  // 胜算云搜索 API
+  shengsuanyunWebSearch: (query: string, options?: any) => Promise<any[]>;
+  shengsuanyunThinkingSearch: (query: string, searchResults: any[], options?: any) => Promise<{ thinkingProcess: string; finalAnswer: string }>;
+  shengsuanyunSearchSuggestions: (partialQuery: string, maxSuggestions?: number) => Promise<string[]>;
+  
   saveProviders: (providers: { name: string; baseUrl: string }[]) => Promise<{ ok: boolean; message?: string }>;
   setProviderKey: (providerName: string, apiKey: string) => Promise<{ ok: boolean; message?: string }>;
   removeProviderKey: (providerName: string) => Promise<{ ok: boolean; message?: string }>;
   hasProviderKey: (providerName: string) => Promise<{ hasKey: boolean }>;
   getProviderKeyPreview: (providerName: string) => Promise<{ preview: string | null; message?: string }>;
+  getApiKey: (providerName: string) => Promise<string>;
   testProvider: (providerName: string) => Promise<{ ok: boolean; message?: string }>;
   migrateLlmconfigNow: () => Promise<{ ok: boolean; count?: number; message?: string }>;
   checkForUpdates: () => Promise<void>;

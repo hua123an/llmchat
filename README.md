@@ -30,10 +30,11 @@
 - **📎 文件处理** - 支持 PDF、Word、图片等多种格式
 - **🌐 网页预览** - 应用内预览网页内容，一键导入知识库
 
-### 🚀 更新亮点 (v2.0.4)
- - 知识库增强版（基础）：文本/文件（PDF、DOCX、TXT）/URL 导入，文档列表、单文档删除、全部清空，本地检索（BM25）与结果预览，侧栏新增入口，新增 `#/knowledge` 路由
- - 自动更新体验优化：设置页“检查更新”新增下载进度条，强制更新浮层可显示进度；修复部分环境下不弹窗的问题
- - Bug 修复与细节：类型错误与无障碍细节修复、下载链接与版本展示同步到 v2.0.4
+### 🚀 更新亮点 (v2.0.5)
+- **胜算云文生图集成**：完整支持胜算云图像生成服务，包括独立配置系统、智能重试机制和专业调试工具
+- **胜算云联网搜索**：支持实时网页搜索、思考模式和搜索建议功能
+- **增强的错误处理**：503/429错误自动重试，详细错误诊断和解决建议
+- **调试工具优化**：新增API调试组件，支持分步连接测试和日志分析
 
 ### 🚀 新增功能 (v2.0.0)
  - 架构重构：服务层/组合式/小型stores拆分
@@ -62,8 +63,8 @@
 访问 [下载页面](https://huaan666.site/update/download.html) 获取最新版本
 
 #### 方式二：直接下载
-- **安装版**: [ChatLLM-2.0.4-x64.exe](https://github.com/hua123an/llmchat/releases/download/v2.0.4/ChatLLM-2.0.4-x64.exe)
-- **便携版**: [ChatLLM-2.0.4-x64-portable.exe](https://github.com/hua123an/llmchat/releases/download/v2.0.4/ChatLLM-2.0.4-x64-portable.exe)
+- **安装版**: [ChatLLM-2.0.5-x64.exe](https://github.com/hua123an/llmchat/releases/download/v2.0.5/ChatLLM-2.0.5-x64.exe)
+- **便携版**: [ChatLLM-2.0.5-x64-portable.exe](https://github.com/hua123an/llmchat/releases/download/v2.0.5/ChatLLM-2.0.5-x64-portable.exe)
 
 #### 方式三：GitHub Releases
 访问 [GitHub Releases](https://github.com/hua123an/llmchat/releases) 页面下载
@@ -178,9 +179,10 @@ chatllm/
 
 查看 [CHANGELOG.md](CHANGELOG.md) 了解版本更新详情。
 
-### 🆕 最新版本 v2.0.4 (2025-08-16)
- - 自动更新稳定性优化与发布说明编码修复
- - 知识库增强基础功能延续优化
+### 🆕 最新版本 v2.0.5 (2025-08.17)
+- 胜算云文生图完整集成：独立配置、智能重试、调试工具
+- 胜算云联网搜索与思考模式支持
+- 增强的错误处理和用户体验优化
 
 ## 📞 支持与反馈
 

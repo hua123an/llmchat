@@ -1093,6 +1093,14 @@ ipcMain.handle('generate-image', async (_event: IpcMainInvokeEvent, request: any
         usage: result.usage ? { provider: result.usage.provider, cost: result.usage.cost || 0 } : undefined,
         error: (result as any).error || undefined
       };
+    } else if (providerName === 'shengsuanyun') {
+      const result = await handleShengsuanyunImageGeneration(request, apiKey);
+      return {
+        success: result.success,
+        images: result.images || [],
+        usage: result.usage ? { provider: result.usage.provider, cost: result.usage.cost || 0 } : undefined,
+        error: (result as any).error || undefined
+      };
     } else {
       throw new Error(`不支持的图像生成服务商: ${providerName}`);
     }
@@ -1326,6 +1334,61 @@ async function handleGeminiImageGeneration(request: any, apiKey: string) {
   return { success: true, images, usage: { provider: 'Google Gemini/Imagen', cost: 0 } };
 }
 
+async function handleShengsuanyunImageGeneration(request: any, apiKey: string) {
+  // 验证API密钥格式
+  if (!apiKey || typeof apiKey !== 'string') {
+    throw new Error('API密钥不能为空');
+  }
+
+  console.log('使用胜算云图像生成服务');
+  console.log('使用的API密钥前缀:', apiKey.substring(0, 10) + '...');
+  console.log('请求的模型:', request.model);
+
+  // 使用胜算云的图像生成API
+  const response = await fetch('https://router.shengsuanyun.com/api/v1/images/generations', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'User-Agent': 'llmchat-electron/2.0.0'
+    },
+    body: JSON.stringify({
+      model: String(request.model || 'stable-diffusion'),
+      prompt: String(request.prompt || ''),
+      auto_route: true,
+      supplier: 'DeepSeek' // 可以根据需要调整供应商
+    })
+  });
+
+  console.log('胜算云API响应状态:', response.status, response.statusText);
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(`胜算云图像生成请求失败: ${response.status} ${error.message || response.statusText}`);
+  }
+
+  const data = await response.json();
+  
+  if (!data.data || !Array.isArray(data.data)) {
+    throw new Error('胜算云API返回数据格式错误');
+  }
+
+  const images = data.data.map((item: any) => ({
+    url: item.url || '',
+    revised_prompt: item.revised_prompt || request.prompt
+  }));
+
+  return {
+    success: true,
+    images: images,
+    usage: {
+      provider: '胜算云',
+      cost: 0 // 成本计算在前端进行
+    }
+  };
+}
+
 ipcMain.handle('send-message', async (_event: IpcMainInvokeEvent, providerName: string, model: string, messages: any[], _userMessageId: string, assistantMessageId: string, attachments?: Array<{ name: string; mime: string; size: number; dataUrl?: string; textSnippet?: string; fullText?: string }>, webSearchEnabled?: boolean, webSearchOptions?: WebSearchOptions) => {
   const providers = store.get('providers') as { name: string; baseUrl: string }[] || [];
   const provider = providers.find(p => p.name === providerName);
@@ -1436,6 +1499,42 @@ ipcMain.handle('send-message', async (_event: IpcMainInvokeEvent, providerName: 
     
     // Google Gemini 专用：使用官方 Generative Language API（避免 429/兼容问题）
     if (/generativelanguage\.googleapis\.com/i.test(baseURL) || /\b(gemini|google)\b/i.test((provider?.name || ''))) {
+      // 全局请求频率限制和监控
+      const requestRateLimiter = new Map<string, number>();
+      const MIN_REQUEST_INTERVAL = 1200; // 最小请求间隔：1.2秒（比Gemini限制稍宽松）
+      
+      // API使用统计
+      const apiStats = {
+        totalRequests: 0,
+        successRequests: 0,
+        rateLimitErrors: 0,
+        retryAttempts: 0,
+        lastResetTime: Date.now()
+      };
+      
+      // 每小时重置统计
+      if (Date.now() - apiStats.lastResetTime > 3600000) {
+        Object.assign(apiStats, {
+          totalRequests: 0,
+          successRequests: 0,
+          rateLimitErrors: 0,
+          retryAttempts: 0,
+          lastResetTime: Date.now()
+        });
+      }
+      
+      const checkRateLimit = (apiKey: string): boolean => {
+        const now = Date.now();
+        const lastRequest = requestRateLimiter.get(apiKey) || 0;
+        
+        if (now - lastRequest < MIN_REQUEST_INTERVAL) {
+          return false; // 请求过于频繁
+        }
+        
+        requestRateLimiter.set(apiKey, now);
+        return true;
+      };
+      
       const toGeminiParts = async (content: any): Promise<any[]> => {
         const parts: any[] = [];
         if (typeof content === 'string') {
@@ -1493,26 +1592,62 @@ ipcMain.handle('send-message', async (_event: IpcMainInvokeEvent, providerName: 
       const base = 'https://generativelanguage.googleapis.com';
       const endpoint = `${base}/v1beta/models/${encodeURIComponent(finalModel)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(apiKey)}`;
 
+      // 检查请求频率限制
+      if (!checkRateLimit(apiKey)) {
+        apiStats.totalRequests++;
+        throw new Error('Gemini API 请求过于频繁，请等待1-2秒后重试');
+      }
+      
+      apiStats.totalRequests++;
+
       // 指数退避请求封装（应对 429）
       const fetchWithBackoff = async (attempt = 0): Promise<Response> => {
         const body: any = { contents, generationConfig: genCfg };
         if (systemInstruction) body.systemInstruction = { role: 'system', parts: [{ text: systemInstruction }] };
+        
+        // 增加随机延迟，避免请求集中
+        if (attempt > 0) {
+          apiStats.retryAttempts++;
+          const baseDelay = Math.floor(1000 * Math.pow(2, attempt)); // 基础延迟：1s, 2s, 4s, 8s
+          const jitter = Math.random() * 1000; // 随机抖动：0-1s
+          const totalDelay = baseDelay + jitter;
+          console.warn(`Gemini API 429/503，第${attempt + 1}次重试，延迟${Math.floor(totalDelay)}ms`);
+          await new Promise(r => setTimeout(r, totalDelay));
+        }
+        
         const resp = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
           body: JSON.stringify(body)
         });
-        if ((resp.status === 429 || resp.status === 503) && attempt < 3) {
-          const delay = Math.floor(400 * Math.pow(2, attempt) + Math.random() * 120);
-          await new Promise(r => setTimeout(r, delay));
+        
+        // 更智能的重试策略
+        if ((resp.status === 429 || resp.status === 503) && attempt < 5) { // 增加重试次数到5次
           return fetchWithBackoff(attempt + 1);
         }
+        
         return resp;
       };
 
       const resp = await fetchWithBackoff(0);
       if (!resp.ok || !resp.body) {
         const text = await resp.text().catch(() => '');
+        
+        if (resp.status === 429) {
+          apiStats.rateLimitErrors++;
+          throw new Error(`Gemini API 请求频率超限 (429)。建议：
+1. 等待1-2分钟后重试
+2. 检查是否有多个客户端同时使用
+3. 考虑升级API配额或使用多个API密钥轮换`);
+        }
+        
+        if (resp.status === 503) {
+          throw new Error(`Gemini API 服务暂时不可用 (503)。建议：
+1. 等待几分钟后重试
+2. 检查Google AI Studio服务状态
+3. 稍后再试`);
+        }
+        
         throw new Error(`Gemini HTTP ${resp.status}${text ? `: ${text.slice(0, 160)}` : ''}`);
       }
 
@@ -1549,6 +1684,9 @@ ipcMain.handle('send-message', async (_event: IpcMainInvokeEvent, providerName: 
       }
 
       // 完成
+      apiStats.successRequests++;
+      console.log(`Gemini API 统计: 总请求${apiStats.totalRequests}, 成功${apiStats.successRequests}, 限流错误${apiStats.rateLimitErrors}, 重试${apiStats.retryAttempts}`);
+      
       flushDelta(assistantMessageId);
       promptTokens = estimatePromptTokens(finalMessages, false);
       completionTokens = estimateTokens(fullResponse, false);
@@ -1901,6 +2039,42 @@ ipcMain.handle('send-message', async (_event: IpcMainInvokeEvent, providerName: 
           // 自动选择工具调用
           requestBody.tool_choice = "auto";
         }
+      } else if (/router\.shengsuanyun\.com/i.test(baseURL) || provider?.name.toLowerCase().includes('shengsuanyun')) {
+        // 胜算云: 使用联网搜索和思考模式
+        
+        // 启用联网搜索
+        if (webSearchEnabled) {
+          // 胜算云支持联网搜索，使用:online后缀
+          if (!finalModel.includes(':online')) {
+            finalModel = `${finalModel}:online`;
+            requestBody.model = finalModel;
+          }
+          
+          // 设置搜索选项
+          if (webSearchOptions) {
+            requestBody.web_search_options = {
+              search_context_size: webSearchOptions.search_context_size || 'medium',
+              max_results: webSearchOptions.max_results || 10,
+              timeout_sec: webSearchOptions.timeout_sec || 30
+            };
+          }
+        }
+        
+        // 启用思考模式（思考链）
+        requestBody.stream_options = {
+          ...requestBody.stream_options,
+          include_usage: true
+        };
+        
+        // 添加思考模式提示
+        const hasSystemMessage = finalMessages.some(msg => msg.role === 'system');
+        if (!hasSystemMessage) {
+          finalMessages.unshift({
+            role: 'system',
+            content: '你是一个智能助手，请仔细思考问题并给出准确的回答。在回答复杂问题时，请先分析问题，然后逐步推理，最后给出结论。'
+          });
+          requestBody.messages = finalMessages;
+        }
       }
     }
 
@@ -2165,3 +2339,255 @@ try {
     } catch {}
   });
 } catch {}
+
+// 胜算云联网搜索
+ipcMain.handle('shengsuanyun-web-search', async (_event: IpcMainInvokeEvent, query: string, options: any) => {
+  try {
+    console.log('🔍 胜算云联网搜索:', query);
+    
+    // 获取胜算云API密钥
+    const apiKey = secureStorage.getApiKey('shengsuanyun');
+    if (!apiKey) {
+      throw new Error('胜算云API密钥未配置');
+    }
+    
+    // 调用胜算云搜索API
+    const response = await fetch('https://router.shengsuanyun.com/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'llmchat-electron/2.0.0'
+      },
+      body: JSON.stringify({
+        model: options.model || 'deepseek/deepseek-v3',
+        messages: [
+          {
+            role: 'user',
+            content: `请搜索以下内容并提供相关信息：${query}`
+          }
+        ],
+        stream: false,
+        web_search_options: {
+          search_context_size: options.search_context_size || 'medium',
+          max_results: options.max_results || 10,
+          timeout_sec: options.timeout_sec || 30
+        }
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(`胜算云搜索请求失败: ${response.status} ${error.message || response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    // 解析搜索结果
+    const searchResults = [];
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      const content = data.choices[0].message.content;
+      
+      // 尝试从内容中提取搜索结果
+      // 这里可以根据实际的API返回格式进行调整
+      if (content.includes('搜索结果') || content.includes('找到以下信息')) {
+        // 简单的搜索结果解析
+        searchResults.push({
+          title: `搜索结果: ${query}`,
+          url: 'https://search.shengsuanyun.com',
+          snippet: content,
+          source: '胜算云',
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        // 如果没有明确的搜索结果格式，将整个回答作为结果
+        searchResults.push({
+          title: `AI回答: ${query}`,
+          url: 'https://chat.shengsuanyun.com',
+          snippet: content,
+          source: '胜算云AI',
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+    
+    console.log(`✅ 胜算云搜索完成，获得 ${searchResults.length} 个结果`);
+    return searchResults;
+    
+  } catch (error) {
+    console.error('❌ 胜算云搜索失败:', error);
+    throw error;
+  }
+});
+
+// 胜算云思考模式搜索
+ipcMain.handle('shengsuanyun-thinking-search', async (_event: IpcMainInvokeEvent, query: string, searchResults: any[], options: any) => {
+  try {
+    console.log('🧠 胜算云思考模式搜索:', query);
+    
+    // 获取胜算云API密钥
+    const apiKey = secureStorage.getApiKey('shengsuanyun');
+    if (!apiKey) {
+      throw new Error('胜算云API密钥未配置');
+    }
+    
+    // 构建思考模式的提示词
+    const thinkingPrompt = `请仔细思考以下问题，并给出详细的回答：
+
+问题：${query}
+
+${searchResults.length > 0 ? `参考信息：${searchResults.map((r, i) => `${i + 1}. ${r.snippet}`).join('\n')}` : ''}
+
+请按照以下步骤进行：
+1. 分析问题的核心要点
+2. 结合参考信息进行推理
+3. 给出准确、详细的答案
+4. 如果信息不足，请说明需要补充哪些信息
+
+请开始思考并回答：`;
+    
+    // 调用胜算云思考模式API
+    const response = await fetch('https://router.shengsuanyun.com/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'llmchat-electron/2.0.0'
+      },
+      body: JSON.stringify({
+        model: options.model || 'deepseek/deepseek-v3',
+        messages: [
+          {
+            role: 'system',
+            content: '你是一个智能助手，请仔细思考问题并给出准确的回答。在回答复杂问题时，请先分析问题，然后逐步推理，最后给出结论。'
+          },
+          {
+            role: 'user',
+            content: thinkingPrompt
+          }
+        ],
+        stream: false,
+        stream_options: {
+          include_usage: true
+        }
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(`胜算云思考模式请求失败: ${response.status} ${error.message || response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    let thinkingProcess = '';
+    let finalAnswer = '';
+    
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      const content = data.choices[0].message.content;
+      
+      // 尝试分离思考过程和最终答案
+      if (content.includes('思考过程') || content.includes('分析：')) {
+        const parts = content.split(/(思考过程|分析：|结论：|答案：)/);
+        if (parts.length >= 4) {
+          thinkingProcess = parts[2]?.trim() || '';
+          finalAnswer = parts[4]?.trim() || parts[2]?.trim() || content;
+        } else {
+          thinkingProcess = content;
+          finalAnswer = content;
+        }
+      } else {
+        thinkingProcess = content;
+        finalAnswer = content;
+      }
+    }
+    
+    console.log('✅ 胜算云思考模式搜索完成');
+    return {
+      thinkingProcess,
+      finalAnswer
+    };
+    
+  } catch (error) {
+    console.error('❌ 胜算云思考模式搜索失败:', error);
+    throw error;
+  }
+});
+
+// 胜算云搜索建议
+ipcMain.handle('shengsuanyun-search-suggestions', async (_event: IpcMainInvokeEvent, partialQuery: string, maxSuggestions: number = 5) => {
+  try {
+    console.log('💡 胜算云搜索建议:', partialQuery);
+    
+    // 获取胜算云API密钥
+    const apiKey = secureStorage.getApiKey('shengsuanyun');
+    if (!apiKey) {
+      throw new Error('胜算云API密钥未配置');
+    }
+    
+    // 调用胜算云API获取搜索建议
+    const response = await fetch('https://router.shengsuanyun.com/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'llmchat-electron/2.0.0'
+      },
+      body: JSON.stringify({
+        model: 'deepseek/deepseek-v3',
+        messages: [
+          {
+            role: 'user',
+            content: `请为搜索词"${partialQuery}"提供${maxSuggestions}个相关的搜索建议，每个建议用换行分隔，不要编号：`
+          }
+        ],
+        stream: false,
+        max_tokens: 200
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(`胜算云搜索建议请求失败: ${response.status} ${error.message || response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    let suggestions: string[] = [];
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      const content = data.choices[0].message.content;
+      suggestions = content.split('\n')
+        .map((s: string) => s.trim())
+        .filter((s: string) => s.length > 0 && s !== partialQuery)
+        .slice(0, maxSuggestions);
+    }
+    
+    console.log(`✅ 胜算云搜索建议完成，获得 ${suggestions.length} 个建议`);
+    return suggestions;
+    
+  } catch (error) {
+    console.error('❌ 胜算云搜索建议失败:', error);
+    return [];
+  }
+});
+
+// 获取API密钥
+ipcMain.handle('get-api-key', async (_event: IpcMainInvokeEvent, providerName: string) => {
+  try {
+    console.log(`🔑 获取${providerName} API密钥`);
+    const apiKey = secureStorage.getApiKey(providerName);
+    if (apiKey) {
+      console.log(`✅ ${providerName} API密钥获取成功`);
+      return apiKey;
+    } else {
+      console.log(`⚠️ ${providerName} API密钥未配置`);
+      return '';
+    }
+  } catch (error) {
+    console.error(`❌ 获取${providerName} API密钥失败:`, error);
+    return '';
+  }
+});

@@ -74,7 +74,7 @@ export async function embedChunksRemotely(chunks: Chunk[], provider: EmbedProvid
   throw new Error('Unsupported embed provider');
 }
 
-export async function saveVectors(docId: string, chunks: Chunk[], embeds: Array<{ id: string; vector: number[] }>): Promise<void> {
+export async function saveVectors(_docId: string, chunks: Chunk[], embeds: Array<{ id: string; vector: number[] }>): Promise<void> {
   const rows: VectorRow[] = embeds.map((e) => {
     const chunk = chunks.find(c => c.id === e.id)!;
     return { id: `v_${e.id}`, docId: chunk.docId, chunkId: chunk.id, vector: e.vector };

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import * as ipc from '../modules/system/ipc';
 import { ref, computed } from 'vue';
 import { createError, handleError } from '../utils/errorHandler';
+import type { ModelInfo } from '../modules/system/ipc';
 
 // 基础数据接口
 export interface Message {
@@ -27,7 +28,7 @@ export interface ChatTab {
 export interface Provider {
   name: string;
   baseUrl: string;
-  models?: string[];
+  models?: ModelInfo[];
 }
 
 export interface SearchResult {

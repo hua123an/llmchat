@@ -3,7 +3,7 @@
     <AppSelect
       v-model="currentProvider"
       class="provider-select"
-      :options="store.providers.map((p: {name:string;baseUrl:string}) => ({ label: formatProviderName(p.name), value: p.name, title: formatProviderName(p.name) }))"
+      :options="store.providers.map((p: any) => ({ label: formatProviderName(p.name), value: p.name, title: formatProviderName(p.name) }))"
       :placeholder="t('chat.placeholders.selectProvider')"
       :aria-label="t('chat.placeholders.selectProvider')"
       @change="store.fetchModels"

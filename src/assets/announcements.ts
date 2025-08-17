@@ -11,6 +11,11 @@ export interface ReleaseNote {
 
 export const releaseNotes: ReleaseNote[] = [
   {
+    "version": "2.0.5",
+    "date": "2025-01-27",
+    "items": []
+  },
+  {
     "version": "2.0.4",
     "date": "2025-08-16",
     "items": [

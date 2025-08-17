@@ -26,6 +26,15 @@ export default defineConfig({
     },
     chunkSizeWarningLimit: 1200,
   },
+  worker: {
+    format: 'es',
+    rollupOptions: {
+      output: {
+        format: 'es',
+        entryFileNames: 'worker/[name]-[hash].js',
+      },
+    },
+  },
   plugins: [
     vue(),
     AutoImport({
