@@ -131,6 +131,15 @@ export async function setProviderKey(providerName: string, apiKey: string): Prom
 export async function removeProviderKey(providerName: string): Promise<{ ok: boolean; message?: string }> {
   return await api().removeProviderKey?.(providerName);
 }
+
+export async function exportProviders(): Promise<{ ok: boolean; canceled: boolean; path?: string; error?: string }> {
+  return await api().exportProviders?.();
+}
+
+export async function importProviders(): Promise<{ ok: boolean; canceled: boolean; count?: number; error?: string }> {
+  return await api().importProviders?.();
+}
+
 export async function refreshOllamaModels(baseUrl?: string): Promise<any> { return await api().refreshOllamaModels?.(baseUrl); }
 export async function migrateLlmconfigNow(): Promise<any> { return await api().migrateLlmconfigNow?.(); }
 

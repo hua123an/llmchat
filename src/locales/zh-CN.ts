@@ -59,7 +59,12 @@ export default {
       language: '语言',
       behavior: '行为',
       sendShortcut: '发送消息快捷键',
-      autoSave: '自动保存对话'
+      autoSave: '自动保存对话',
+      dataBackup: '数据备份',
+      exportTooltip: '将所有AI模型配置导出到一个JSON文件中。',
+      exportButton: '导出配置',
+      importTooltip: '从JSON文件中导入AI模型配置。',
+      importButton: '导入配置'
     },
     ai: {
       defaultConfig: '默认配置',
@@ -103,7 +108,13 @@ export default {
     messages: {
       saveSuccess: '设置已保存',
       loadError: '加载设置失败',
-      upToDate: '当前已是最新版本！'
+      upToDate: '当前已是最新版本！',
+      exportSuccess: '配置导出成功。',
+      exportFailed: '配置导出失败。',
+      importSuccess: '配置导入成功。',
+      importFailed: '配置导入失败。',
+      checkingForUpdate: '正在检查更新...',
+      updateError: '检查更新失败: '
     },
     // 新增：服务商配置
     providers: {

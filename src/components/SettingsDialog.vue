@@ -46,6 +46,18 @@
           </div>
 
           <div class="setting-section">
+            <h3 class="section-title">{{ t('settings.general.dataBackup') }}</h3>
+            <div class="setting-item">
+              <label class="setting-label">{{ t('settings.general.exportTooltip') }}</label>
+              <el-button @click="handleExport" class="setting-control">{{ t('settings.general.exportButton') }}</el-button>
+            </div>
+            <div class="setting-item">
+              <label class="setting-label">{{ t('settings.general.importTooltip') }}</label>
+              <el-button @click="handleImport" class="setting-control">{{ t('settings.general.importButton') }}</el-button>
+            </div>
+          </div>
+
+          <div class="setting-section">
             <h3 class="section-title">{{ t('settings.general.behavior') }}</h3>
             <div class="setting-item">
               <label class="setting-label">{{ t('settings.general.sendShortcut') }}</label>
@@ -612,6 +624,35 @@ const shortcuts = computed(() => [
   { id: 'switch-space-3', name: t('shortcuts.switchSpace3'), key: `${mod}3` }
 ]);
 
+// 导出/导入配置
+const handleExport = async () => {
+  try {
+    const result = await ipc.exportProviders();
+    if (result?.ok) {
+      ElMessage.success(t('settings.messages.exportSuccess'));
+    } else if (!result?.canceled) {
+      throw new Error(result?.error || 'Unknown error');
+    }
+  } catch (err: any) {
+    ElMessage.error(t('settings.messages.exportFailed') + ': ' + err.message);
+  }
+};
+
+const handleImport = async () => {
+  try {
+    const result = await ipc.importProviders();
+    if (result?.ok) {
+      ElMessage.success(t('settings.messages.importSuccess'));
+      // 重新加载 provider 列表
+      await loadProviders();
+    } else if (!result?.canceled) {
+      throw new Error(result?.error || 'Unknown error');
+    }
+  } catch (err: any) {
+    ElMessage.error(t('settings.messages.importFailed') + ': ' + err.message);
+  }
+};
+
 // 主题切换
 const handleThemeChange = (newTheme: string) => {
   themeManager.setTheme(newTheme as any);
@@ -634,25 +675,10 @@ const openDocs = () => {
 
 const checkUpdates = async () => {
   try {
-    // 本地自动检测（基于 GitHub 最新版本）
-    const latest = await ipc.checkLatestVersion();
-    const current = appVersionRef.value || (await ipc.getAppVersion());
-    const curTag = `v${(current || '').trim()}`;
-    if (latest?.tag && latest.tag !== curTag) {
-      (window as any).ElMessageBox?.confirm?.(
-        (latest?.body || '').slice(0, 2000) || `检测到新版本 ${latest.tag}，是否前往下载？`,
-        `发现新版本 ${latest.tag}`,
-        { type: 'info' }
-      )
-      .then(() => window.open(latest.html_url || 'https://github.com/hua123an/llmchat/releases/latest', '_blank'))
-      .catch(() => {});
-    } else {
-      ElMessage.success('当前已是最新版本');
-    }
-    // 仍然支持内置 autoUpdater 检查
+    ElMessage.info(t('settings.messages.checkingForUpdate', '正在检查更新...'));
     await ipc.updaterCheck();
-  } catch {
-    ElMessage.error(t('settings.messages.loadError'));
+  } catch (err: any) {
+    ElMessage.error(t('settings.messages.updateError', '检查更新失败: ') + err.message);
   }
 };
 

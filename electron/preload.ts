@@ -50,6 +50,10 @@ export interface ElectronAPI {
   // Embeddings
   embedTexts: (providerName: string, texts: string[], options?: { model?: string }) => Promise<number[][]>;
 
+  // Import/Export
+  exportProviders: () => Promise<{ ok: boolean; canceled: boolean; path?: string; error?: string }>;
+  importProviders: () => Promise<{ ok: boolean; canceled: boolean; count?: number; error?: string }>;
+
 }
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -102,6 +106,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   fetchRemoteUpdateMeta: (url: string) => ipcRenderer.invoke('fetch-remote-update-meta', url),
   // Embeddings
   embedTexts: (providerName: string, texts: string[], options?: { model?: string }) => ipcRenderer.invoke('embed-texts', providerName, texts, options),
+  
+  // Import/Export
+  exportProviders: () => ipcRenderer.invoke('export-providers'),
+  importProviders: () => ipcRenderer.invoke('import-providers'),
   
 
 });

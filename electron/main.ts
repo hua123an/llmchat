@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent, Tray, Menu, nativeImage, globalShortcut } from 'electron';
+import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent, Tray, Menu, nativeImage, globalShortcut, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import OpenAI from 'openai';
 import path from 'node:path';
@@ -615,6 +615,77 @@ ipcMain.handle('save-providers', (_e, providers: Array<{ name: string; baseUrl: 
     return { ok: true };
   } catch (error: any) {
     return { ok: false, message: error?.message || 'save providers failed' };
+  }
+});
+
+// 导出 Provider 配置（包含API Key）
+ipcMain.handle('export-providers', async () => {
+  try {
+    const providers = (store.get('providers') as { name: string; baseUrl: string }[]) || [];
+    const exportData = providers.map(p => ({
+      name: p.name,
+      baseUrl: p.baseUrl,
+      apiKey: secureStorage.getApiKey(p.name) || ''
+    }));
+
+    const { canceled, filePath } = await dialog.showSaveDialog(win!, {
+      title: '导出模型配置',
+      defaultPath: 'chatllm-models-config.json',
+      filters: [{ name: 'JSON Files', extensions: ['json'] }]
+    });
+
+    if (canceled || !filePath) {
+      return { ok: true, canceled: true };
+    }
+
+    fs.writeFileSync(filePath, JSON.stringify(exportData, null, 2));
+    return { ok: true, canceled: false, path: filePath };
+  } catch (error: any) {
+    return { ok: false, error: error.message };
+  }
+});
+
+// 导入 Provider 配置
+ipcMain.handle('import-providers', async () => {
+  try {
+    const { canceled, filePaths } = await dialog.showOpenDialog(win!, {
+      title: '导入模型配置',
+      properties: ['openFile'],
+      filters: [{ name: 'JSON Files', extensions: ['json'] }]
+    });
+
+    if (canceled || !filePaths || filePaths.length === 0) {
+      return { ok: true, canceled: true };
+    }
+
+    const filePath = filePaths[0];
+    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    const importData = JSON.parse(fileContent);
+
+    if (!Array.isArray(importData)) {
+      throw new Error('无效的配置文件格式，需要一个数组。');
+    }
+
+    const currentProviders = (store.get('providers') as { name: string; baseUrl: string }[]) || [];
+    const providerMap = new Map(currentProviders.map(p => [p.name, p]));
+
+    for (const p of importData) {
+      if (p && typeof p.name === 'string' && typeof p.baseUrl === 'string') {
+        providerMap.set(p.name, { name: p.name, baseUrl: p.baseUrl });
+        if (typeof p.apiKey === 'string' && p.apiKey) {
+          secureStorage.storeApiKey(p.name, p.apiKey);
+        }
+      } else {
+        console.warn('Skipping invalid provider entry during import:', p);
+      }
+    }
+
+    const newProviders = Array.from(providerMap.values());
+    store.set('providers', newProviders);
+
+    return { ok: true, canceled: false, count: newProviders.length };
+  } catch (error: any) {
+    return { ok: false, error: error.message };
   }
 });
 

@@ -59,7 +59,12 @@ export default {
       language: 'Language',
       behavior: 'Behavior',
       sendShortcut: 'Send Message Shortcut',
-      autoSave: 'Auto Save Conversations'
+      autoSave: 'Auto Save Conversations',
+      dataBackup: 'Data Backup',
+      exportTooltip: 'Export all AI model configurations to a JSON file.',
+      exportButton: 'Export Config',
+      importTooltip: 'Import AI model configurations from a JSON file.',
+      importButton: 'Import Config'
     },
     ai: {
       defaultConfig: 'Default Configuration',
@@ -103,7 +108,13 @@ export default {
     messages: {
       saveSuccess: 'Settings saved successfully',
       loadError: 'Failed to load settings',
-      upToDate: 'You are already using the latest version!'
+      upToDate: 'You are already using the latest version!',
+      exportSuccess: 'Configuration exported successfully.',
+      exportFailed: 'Failed to export configuration.',
+      importSuccess: 'Configuration imported successfully.',
+      importFailed: 'Failed to import configuration.',
+      checkingForUpdate: 'Checking for updates...',
+      updateError: 'Failed to check for updates: '
     },
     providers: {
       title: 'Providers & API Configuration',
